@@ -1,0 +1,8 @@
+# This folder holds many projects; track only the 2D Battle Simulator.
+# Ignore everything by default…
+/*
+# …except the battle simulator files.
+!/battle-sim.html
+!/battle-sim-side.html
+!/README.md
+!/.gitignore
