@@ -55,6 +55,7 @@
       <div class="sec"><div class="lbl">🛡️ Armour</div><div class="grid" id="armorGrid"></div></div>
       <div class="sec"><div class="lbl">🚜 Vehicles</div><div class="grid" id="vehicleGrid"></div></div>
       <div class="sec"><div class="lbl">💥 Strikes &nbsp;<span style="color:#ffd166">(mark a spot)</span></div><div class="grid" id="strikeGrid"></div></div>
+      <div class="sec"><div class="lbl">🛠 Build map &nbsp;<span style="color:#ffd166">(drag ground/water)</span></div><div class="grid" id="buildGrid"></div></div>
       <div class="sec"><div class="lbl">Map</div><select id="mapSel"></select></div>
     </div>
     <div id="controls">
@@ -214,6 +215,7 @@ const WALL_C = '#2a3346', WALL_E = '#3b4760';
 function rect(x,y,w,h){ return {x,y,w,h}; }
 const FULL = rect(0,GY,W,H-GY);
 const MAPS = [
+  { name:'🛠 Sandbox (build)', build:()=>[FULL] },
   { name:'Flat Field', build:()=>[FULL] },
   { name:'Platforms',  build:()=>[FULL, rect(210,510,210,20), rect(535,400,210,20), rect(860,510,210,20)] },
   { name:'The Pit',    build:()=>[rect(0,GY,510,H-GY), rect(770,GY,510,H-GY)] },               // deadly gap 510–770
@@ -255,7 +257,8 @@ const MAPS = [
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 let plats = MAPS[0].build();
 let units = [], projs = [], fx = [], hazards = [], strikes = [], screenFlash = 0;
-let brush = { team:'red', kind:'unit', skin:'soldier', weapon:'rifle', armor:'none', vehicle:'tank', strike:'missile' };
+let waters = [], mapItems = [], buildDrag = null;   // custom-built terrain / hazards
+let brush = { team:'red', kind:'unit', skin:'soldier', weapon:'rifle', armor:'none', vehicle:'tank', strike:'missile', tool:'ground' };
 let mode = 'setup', paused = false, speed = 1, mapIndex = 0, bodyStyle = 'stickman';
 const skinById = id => SKINS.find(s=>s.id===id);
 const wepById  = id => WEAPONS.find(w=>w.id===id);
@@ -288,11 +291,16 @@ VEHICLES.forEach(v=>{ const el=document.createElement('div'); el.className='chip
 const strikeGrid = document.getElementById('strikeGrid');
 STRIKES.forEach(st=>{ const el=document.createElement('div'); el.className='chip';
   el.innerHTML=`<span class="em">${st.em}</span><span class="nm">${st.name}<span class="st">DMG ${st.dmg} · ${Math.round(st.aoe)} AOE</span></span>`;
-  el.onclick=()=>{ brush.kind='strike'; brush.strike=st.id; sel(strikeGrid,st.id,STRIKES); clearSel(skinGrid); clearSel(weaponGrid); clearSel(vehicleGrid); }; strikeGrid.appendChild(el); });
+  el.onclick=()=>{ brush.kind='strike'; brush.strike=st.id; sel(strikeGrid,st.id,STRIKES); clearSel(skinGrid); clearSel(weaponGrid); clearSel(vehicleGrid); clearSel(buildGrid); }; strikeGrid.appendChild(el); });
+const BUILD_TOOLS=[{id:'ground',name:'Ground',em:'🟫'},{id:'water',name:'Water',em:'🌊'},{id:'barbwire',name:'Barbwire',em:'⚡'},{id:'mine',name:'Mine',em:'💣'},{id:'erase',name:'Erase',em:'🧽'}];
+const buildGrid=document.getElementById('buildGrid');
+BUILD_TOOLS.forEach(bt=>{ const el=document.createElement('div'); el.className='chip';
+  el.innerHTML=`<span class="em">${bt.em}</span><span class="nm">${bt.name}</span>`;
+  el.onclick=()=>{ brush.kind='build'; brush.tool=bt.id; sel(buildGrid,bt.id,BUILD_TOOLS); clearSel(skinGrid); clearSel(weaponGrid); clearSel(vehicleGrid); clearSel(strikeGrid); }; buildGrid.appendChild(el); });
 function sel(grid,id,arr){ [...grid.children].forEach((c,i)=>c.classList.toggle('sel',arr[i].id===id)); }
 const mapSel=document.getElementById('mapSel');
 MAPS.forEach((m,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=m.name; mapSel.appendChild(o); });
-mapSel.onchange=()=>{ mapIndex=+mapSel.value; plats=MAPS[mapIndex].build(); };
+mapSel.onchange=()=>{ mapIndex=+mapSel.value; plats=MAPS[mapIndex].build(); waters=[]; mapItems=[]; };
 document.getElementById('teamRed').onclick=()=>setTeam('red');
 document.getElementById('teamBlue').onclick=()=>setTeam('blue');
 function setTeam(t){ brush.team=t; document.getElementById('teamRed').classList.toggle('sel',t==='red'); document.getElementById('teamBlue').classList.toggle('sel',t==='blue'); }
@@ -357,18 +365,33 @@ function unitAt(x,y){ return units.find(u=>{ const cy=centerY(u);
 let dragging=false,lastPlace=null;
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('mousedown',e=>{ if(mode!=='setup')return; const p=toWorld(e);
-  if(e.button===2){ const m=strikes.find(s=>Math.abs(s.x-p.x)<24); if(m){ strikes.splice(strikes.indexOf(m),1); return; }
+  if(e.button===2){ if(brush.kind==='build'){ eraseAt(p.x,p.y); return; }
+    const m=strikes.find(s=>Math.abs(s.x-p.x)<24); if(m){ strikes.splice(strikes.indexOf(m),1); return; }
     const u=unitAt(p.x,p.y); if(u)units.splice(units.indexOf(u),1); return; }
+  if(brush.kind==='build'){ const t=brush.tool;
+    if(t==='ground'||t==='water'){ buildDrag={x0:p.x,y0:p.y,x1:p.x,y1:p.y}; }
+    else if(t==='erase'){ eraseAt(p.x,p.y); }
+    else { const top=surfaceUnder(p.x,p.y); mapItems.push({type:t, x:p.x, y:top===null?GY:top, armed:t==='mine'}); }
+    return; }
   if(brush.kind==='strike'){ const st=strikeById(brush.strike); strikes.push({ x:p.x, team:brush.team, sid:brush.strike, t:st.delay, max:st.delay, fired:false }); return; }
   if(brush.kind==='vehicle'){ spawnVehicle(p.x,p.y); return; }
   const u=unitAt(p.x,p.y);
   if(u && u.kind!=='vehicle'){ if(u.team!==brush.team) u.country=pickCountry(brush.team); u.weapon=brush.weapon; u.team=brush.team; u.armor=brush.armor;
     u.maxHp=skinById(u.skin).hp+armorById(u.armor).hp; u.hp=u.maxHp; flash(u.x,bodyCY(u),'#ffd166'); return; }
   dragging=true; lastPlace=p; spawnUnit(p.x,p.y); });
-addEventListener('mousemove',e=>{ if(!dragging||mode!=='setup')return; const p=toWorld(e);
+addEventListener('mousemove',e=>{ if(mode!=='setup')return; const p=toWorld(e);
+  if(buildDrag){ buildDrag.x1=p.x; buildDrag.y1=p.y; return; }
+  if(!dragging)return;
   if(!lastPlace||(p.x-lastPlace.x)**2+(p.y-lastPlace.y)**2>34*34){ lastPlace=p; spawnUnit(p.x,p.y); } });
-addEventListener('mouseup',()=>dragging=false);
+addEventListener('mouseup',()=>{ dragging=false;
+  if(buildDrag){ const r=normRect(buildDrag); if(r.w>6&&r.h>6){ (brush.tool==='water'?waters:plats).push(r); } buildDrag=null; } });
 function toWorld(e){ const r=cv.getBoundingClientRect(); return { x:(e.clientX-r.left)*(W/r.width), y:(e.clientY-r.top)*(H/r.height) }; }
+function normRect(d){ return { x:Math.min(d.x0,d.x1), y:Math.min(d.y0,d.y1), w:Math.abs(d.x1-d.x0), h:Math.abs(d.y1-d.y0) }; }
+function eraseAt(x,y){
+  for(let i=mapItems.length-1;i>=0;i--){ const m=mapItems[i]; if(Math.abs(m.x-x)<22 && Math.abs(m.y-y)<26){ mapItems.splice(i,1); return; } }
+  for(let i=waters.length-1;i>=0;i--){ const w=waters[i]; if(x>w.x&&x<w.x+w.w&&y>w.y&&y<w.y+w.h){ waters.splice(i,1); return; } }
+  for(let i=plats.length-1;i>=0;i--){ const p=plats[i]; if(x>p.x&&x<p.x+p.w&&y>p.y&&y<p.y+p.h){ plats.splice(i,1); return; } }
+}
 
 function armEveryone(wid){ units.forEach(u=>u.weapon=wid); toast('Armed '+units.length+' fighters with '+wepById(wid).name); }
 let toastT=0,toastMsg='';
@@ -388,8 +411,8 @@ function setMode(m){ mode=m; startBtn.textContent=m==='battle'?'⏸ Pause':'▶ 
 function toggleBattle(){ if(mode==='setup'){ if(units.length)startBattle(); }
   else if(mode==='battle'){ paused=!paused; startBtn.textContent=paused?'▶ Resume':'⏸ Pause'; }
   else if(mode==='over') resetBattle(); }
-function startBattle(){ paused=false; projs=[];fx=[];hazards=[];screenFlash=0; strikes.forEach(m=>{m.fired=false;m.t=m.max;}); units.forEach(u=>{u.sx=u.x;u.sy=u.y;}); setMode('battle'); }
-function resetBattle(){ projs=[];fx=[];hazards=[];screenFlash=0; strikes.forEach(m=>{m.fired=false;m.t=m.max;}); units.forEach(u=>{
+function startBattle(){ paused=false; projs=[];fx=[];hazards=[];screenFlash=0; strikes.forEach(m=>{m.fired=false;m.t=m.max;}); mapItems.forEach(it=>{if(it.type==='mine')it.armed=true;}); units.forEach(u=>{u.sx=u.x;u.sy=u.y;}); setMode('battle'); }
+function resetBattle(){ projs=[];fx=[];hazards=[];screenFlash=0; strikes.forEach(m=>{m.fired=false;m.t=m.max;}); mapItems.forEach(it=>{if(it.type==='mine')it.armed=true;}); units.forEach(u=>{
   u.x=u.sx;u.y=u.sy;u.vx=0;u.vy=0;u.onGround=false;u.alive=true;u.cd=0;u.target=null;
   u.slow=0;u.hit=0;u.flash=0;u.deadT=0;u.ragA=0;u.ragV=0;u.face=u.team==='red'?1:-1;
   if(u.kind==='vehicle'){ u.hp=u.vt.hp;u.maxHp=u.vt.hp;u.crashFall=false; if(u.domain==='air')u.y=u.vt.alt; }
@@ -574,7 +597,8 @@ function updateBattle(dt){
       const los = (w.cat==='ranged' && !w.lob) ? clearShot(u.x,cyU,t.x,cyT) : true;
       const reach = w.cat==='melee' ? w.range + u.size + (t.size||14)*0.5 : w.range;  // blade swings from the body edge
       const prefer = w.cat==='melee'? reach*0.6 : w.range*0.7;
-      const sp = u.speed*BASE*(u.slow>0?0.45:1)*armorById(u.armor).spd;
+      const inWater = waters.some(wr=> u.x>wr.x && u.x<wr.x+wr.w && u.y>wr.y-4 && u.y<wr.y+wr.h+10);
+      const sp = u.speed*BASE*(u.slow>0?0.45:1)*armorById(u.armor).spd*(inWater?0.5:1);
       const ctrl = u.onGround?1:AIRCTRL;
       if(w.cat==='ranged' && !los){ u.vx += Math.sign(dx)*sp*ctrl*dt*8; u.moving=true; }   // shot blocked → advance for a clear line
       else if(Math.abs(dx)>prefer){ u.vx += Math.sign(dx)*sp*ctrl*dt*8; u.moving=true; }
@@ -631,6 +655,11 @@ function updateBattle(dt){
   // called-in strikes count down then launch (one use)
   for(const m of strikes){ if(m.fired)continue; m.t-=dt; if(m.t<=0){ launchStrike(m); m.fired=true; } }
   if(screenFlash>0) screenFlash-=dt*1.6;
+  // placed map items: barbwire (slow + light DoT) and mines (step-trigger blast, neutral)
+  for(const it of mapItems){
+    if(it.type==='barbwire'){ for(const e of units){ if(!e.alive)continue; if(Math.abs(e.x-it.x)<26 && Math.abs(e.y-it.y)<22){ e.slow=Math.max(e.slow,1.0); damage(e,9*dt,undefined,undefined,undefined,true); } } }
+    else if(it.type==='mine' && it.armed){ for(const e of units){ if(!e.alive)continue; if(Math.abs(e.x-it.x)<20 && Math.abs(e.y-it.y)<24){ it.armed=false; explode(it.x,it.y-6,'neutral',95,82); break; } } }
+  }
   for(const f of fx){ f.t-=dt; if(f.vx!==undefined){ f.x+=f.vx*dt; f.y+=f.vy*dt; if(f.type==='ember')f.vy+=420*dt; else if(f.type==='smoke')f.vx*=0.96; } } fx=fx.filter(f=>f.t>0);
   // remove units that fell far away
   units=units.filter(u=> u.alive || u.deadT < (u.kind==='vehicle'?4:10));   // corpses linger 10s
@@ -1020,6 +1049,19 @@ function render(){
     ctx.fillStyle=WALL_E; ctx.fillRect(p.x,p.y,p.w,4); }
   // map decorations
   if(MAPS[mapIndex] && MAPS[mapIndex].decor) MAPS[mapIndex].decor();
+  // water (walk-through slow zones)
+  for(const wr of waters){ const tt=performance.now()/400;
+    ctx.fillStyle='rgba(54,126,196,0.38)'; ctx.fillRect(wr.x,wr.y,wr.w,wr.h);
+    ctx.fillStyle='rgba(150,205,255,0.55)'; for(let x=wr.x;x<wr.x+wr.w;x+=10) ctx.fillRect(x, wr.y+Math.sin(tt+x*0.05)*1.5, 6, 2.5); }
+  // placed map items (barbwire / mines)
+  for(const it of mapItems){
+    if(it.type==='barbwire'){ ctx.strokeStyle='#9aa3ad'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(it.x-22,it.y); ctx.lineTo(it.x-22,it.y-16); ctx.moveTo(it.x+22,it.y); ctx.lineTo(it.x+22,it.y-16); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(it.x-22,it.y-13); ctx.lineTo(it.x+22,it.y-3); ctx.moveTo(it.x-22,it.y-3); ctx.lineTo(it.x+22,it.y-13); ctx.stroke();
+      ctx.fillStyle='#cdd3da'; for(const bx of [-14,0,14]){ ctx.beginPath(); ctx.arc(it.x+bx,it.y-8,1.8,0,7); ctx.fill(); } }
+    else if(it.type==='mine'){ ctx.fillStyle=it.armed?'#3a3f47':'#2a2d33'; ctx.beginPath(); ctx.arc(it.x,it.y-3,8,Math.PI,0); ctx.fill();
+      ctx.strokeStyle='#555'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(it.x,it.y-11); ctx.lineTo(it.x,it.y-17); ctx.stroke();
+      if(it.armed){ const bl=Math.sin(performance.now()/200)>0; ctx.fillStyle=bl?'#ff3030':'#5a0000'; ctx.beginPath(); ctx.arc(it.x,it.y-18,2.2,0,7); ctx.fill(); } } }
   // strike target markers (reticle + countdown)
   for(const m of strikes){ if(m.fired)continue; const col=m.team==='red'?'#ff5050':'#4da6ff', my=GY-8, k=m.t/m.max;
     ctx.strokeStyle=col; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(m.x,my,16,0,7); ctx.stroke();
@@ -1067,6 +1109,10 @@ function render(){
       grd.addColorStop(0,'#fff'); grd.addColorStop(0.4,f.color); grd.addColorStop(1,'rgba(255,140,0,0)'); ctx.fillStyle=grd;
       ctx.beginPath(); ctx.moveTo(0,-5); ctx.lineTo(len,0); ctx.lineTo(0,5); ctx.closePath(); ctx.fill();                          // hot cone
       ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(0,0,3.5*k+1.5,0,7); ctx.fill(); ctx.globalAlpha=1; ctx.restore(); } }
+  // build drag preview
+  if(buildDrag){ const r=normRect(buildDrag); const water=brush.tool==='water';
+    ctx.fillStyle=water?'rgba(54,126,196,0.3)':'rgba(120,140,90,0.35)'; ctx.fillRect(r.x,r.y,r.w,r.h);
+    ctx.strokeStyle=water?'#6cf':'#bda06a'; ctx.lineWidth=2; ctx.strokeRect(r.x,r.y,r.w,r.h); }
   // counts
   document.getElementById('cRed').textContent  = units.filter(u=>u.alive&&u.team==='red').length;
   document.getElementById('cBlue').textContent = units.filter(u=>u.alive&&u.team==='blue').length;
