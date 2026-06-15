@@ -490,6 +490,8 @@ function projDie(p){ if(p.aoe) explode(p.x,p.y,p.team,p.dmg,p.aoe,p.owner);
   if(p.hazard) spawnHazard(p.x,p.y,p.team,p.hazard,p.owner,p.dmg);
   if(p.nuke) screenFlash=1; }
 function launchStrike(m){ const st=strikeById(m.sid);
+  if(m.sid==='v2'){ const left=m.team==='red', x0=left?20:W-20, dxx=m.x-x0, tf=2.3;  // ballistic arc from your side
+    projs.push({ x:x0, y:GY-6, vx:dxx/tf, vy:-0.5*GRAV*tf, dmg:st.dmg, team:m.team, color:st.color, aoe:st.aoe, knock:480, grav:true, life:tf+2.5, r:7, strike:true }); return; }
   if(st.kind==='ground'){ const left=m.team==='red', x0=left?12:W-12, dir=left?1:-1;
     projs.push({ x:x0, y:GY-14, vx:dir*st.speed, vy:0, dmg:st.dmg, team:m.team, color:st.color, aoe:st.aoe, knock:520, life:8, r:6, strike:true, detX:m.x }); }
   else if(st.carpet){ for(let i=0;i<6;i++){ const ox=m.x-150+i*60;
