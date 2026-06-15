@@ -30,7 +30,7 @@
   #controls .row { display:flex; gap:8px; }
   #controls button { flex:1; padding:10px; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:13px; }
   #startBtn { background:#2ea043; color:#fff; } #startBtn.battle { background:#d29922; }
-  #resetBtn,#clearBtn { background:#30363d; color:var(--txt); } #randBtn { background:#1f6feb; color:#fff; }
+  #resetBtn,#clearBtn,#saveBtn,#loadBtn { background:#30363d; color:var(--txt); } #randBtn { background:#1f6feb; color:#fff; }
   .speedrow { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--dim); }
   #stage { flex:1; position:relative; display:flex; align-items:center; justify-content:center; background:#06080d; }
   canvas { max-width:100%; max-height:100%; box-shadow:0 0 40px #000a; }
@@ -61,6 +61,7 @@
     <div id="controls">
       <div class="speedrow">Speed <input type="range" id="speed" min="0.25" max="3" step="0.25" value="1"><span id="speedVal">1×</span></div>
       <div class="row"><button id="randBtn">🎲 Random Army</button><button id="clearBtn">🗑 Clear</button></div>
+      <div class="row"><button id="saveBtn">💾 Save Map</button><button id="loadBtn">📂 Load Map</button></div>
       <div class="row"><button id="resetBtn">↺ Reset</button><button id="startBtn">▶ Start</button></div>
     </div>
   </div>
@@ -311,6 +312,27 @@ startBtn.onclick=toggleBattle;
 document.getElementById('resetBtn').onclick=resetBattle;
 document.getElementById('clearBtn').onclick=()=>{ units=[];projs=[];fx=[];hazards=[];strikes=[];screenFlash=0; setMode('setup'); };
 document.getElementById('randBtn').onclick=randomArmy;
+function saveMap(){ const R=r=>[Math.round(r.x),Math.round(r.y),Math.round(r.w),Math.round(r.h)];
+  const data={ p:plats.map(R), w:waters.map(R),
+    i:mapItems.map(it=>[it.type,Math.round(it.x),Math.round(it.y)]),
+    u:units.map(u=> u.kind==='vehicle' ? ['v',u.vid,u.team,Math.round(u.x),Math.round(u.y)]
+        : ['u',u.skin,u.weapon,u.armor,u.country,u.team,Math.round(u.x),Math.round(u.y)]),
+    s:strikes.map(m=>[m.sid,m.team,Math.round(m.x)]) };
+  return btoa(JSON.stringify(data)); }
+function loadMap(str){ const d=JSON.parse(atob(str.trim()));
+  units=[];projs=[];fx=[];hazards=[];strikes=[];screenFlash=0;buildDrag=null;
+  plats=(d.p||[]).map(a=>rect(a[0],a[1],a[2],a[3]));
+  waters=(d.w||[]).map(a=>rect(a[0],a[1],a[2],a[3]));
+  mapItems=(d.i||[]).map(a=>({type:a[0],x:a[1],y:a[2],armed:a[0]==='mine'}));
+  (d.u||[]).forEach(a=>{ if(a[0]==='v'){ if(!vehById(a[1]))return; units.push(makeVehicle(a[3],a[4],a[2],a[1])); }
+    else { const u=makeUnit(a[6],a[7],a[5],a[1],a[2],a[3]); u.country=a[4]||pickCountry(a[5]); units.push(u); } });
+  strikes=(d.s||[]).map(a=>{ const st=strikeById(a[0]); return st?{x:a[2],team:a[1],sid:a[0],t:st.delay,max:st.delay,fired:false}:null; }).filter(Boolean);
+  setMode('setup'); }
+document.getElementById('saveBtn').onclick=()=>{ const code=saveMap();
+  navigator.clipboard && navigator.clipboard.writeText(code).catch(()=>{});
+  prompt('Map code (copied to clipboard — paste it into Load to restore):', code); };
+document.getElementById('loadBtn').onclick=()=>{ const s=prompt('Paste a saved map code:'); if(!s)return;
+  try{ loadMap(s); toast('Map loaded'); }catch(e){ alert('Invalid map code'); } };
 addEventListener('keydown',e=>{ if(e.code==='Space'){e.preventDefault();toggleBattle();}
   else if(e.key==='r'||e.key==='R')resetBattle(); else if(e.key==='c'||e.key==='C'){units=[];projs=[];fx=[];hazards=[];strikes=[];screenFlash=0;setMode('setup');} });
 
