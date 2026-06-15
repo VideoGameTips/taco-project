@@ -3,7 +3,7 @@
 /*
 # …except the battle simulator files.
 !/battle-sim.html
-!/battle-sim-side.html
+!/index.html
 !/README.md
 !/CLAUDE.md
 !/.gitignore

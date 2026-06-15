@@ -3,11 +3,11 @@
 TABS-meets-Melon-Playground browser battle sandbox. Repo: `VideoGameTips/2d-battle-simulator` (public).
 
 ## Files
-- **`battle-sim-side.html`** — THE game. Side-view, gravity, IK limbs, semi-ragdoll, vehicles, strikes. ~everything lives here.
+- **`index.html`** — THE game. Side-view, gravity, IK limbs, semi-ragdoll, vehicles, strikes. ~everything lives here.
 - **`battle-sim.html`** — original top-down version (circle fighters). Mostly frozen; only touch if asked.
 - Each is a **single self-contained HTML file**: vanilla JS + Canvas 2D, **no build, no deps, no assets, no server**. Keep it that way.
 
-## How it's built (battle-sim-side.html)
+## How it's built (index.html)
 
 All logic is in one `<script>`. Rough map:
 
@@ -34,8 +34,8 @@ All logic is in one `<script>`. Rough map:
 - Canvas transforms must stay balanced (save/restore) — drawHumanoid/drawBall nest several.
 
 ## Verify / run
-- Syntax: extract the `<script>` and `node --check` it (no HTML linter needed). E.g. `python3 -c "import re;open('/tmp/c.js','w').write(re.search(r'<script>(.*)</script>',open('battle-sim-side.html').read(),re.S).group(1))" && node --check /tmp/c.js`.
-- Run: just open the file, or `python3 -m http.server`. A `.claude/launch.json` server named `tabs-game` serves the folder on :3456 → `/battle-sim-side.html`.
+- Syntax: extract the `<script>` and `node --check` it (no HTML linter needed). E.g. `python3 -c "import re;open('/tmp/c.js','w').write(re.search(r'<script>(.*)</script>',open('index.html').read(),re.S).group(1))" && node --check /tmp/c.js`.
+- Run: just open the file, or `python3 -m http.server`. A `.claude/launch.json` server named `tabs-game` serves the folder on :3456 → `/index.html`.
 - Preview note: rAF throttles when the tab is backgrounded, so for screenshots drive it manually via eval: set up `units`, call `updateBattle(0.016)` in a loop, then `render()`, then screenshot.
 
 ## Conventions

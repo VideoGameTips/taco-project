@@ -4,12 +4,12 @@ A TABS-meets-Melon-Playground sandbox battle simulator that runs entirely in the
 
 Two versions:
 
-- **`battle-sim-side.html`** — the main game. Side view with gravity, jointed (two-bone IK) limbs, semi-ragdoll physics, climbing, and a huge roster.
+- **`index.html`** — the main game. Side view with gravity, jointed (two-bone IK) limbs, semi-ragdoll physics, climbing, and a huge roster.
 - **`battle-sim.html`** — the original top-down version (circle fighters).
 
 ## How to play
 
-1. Open `battle-sim-side.html` in any modern browser.
+1. Open `index.html` in any modern browser.
 2. Pick a **team** (Red / Blue), a **skin**, a **weapon**, and optionally **armour**, then **click the battlefield** to place fighters (drag to place many, right-click to delete).
 3. Place **vehicles** from the panel, choose a **map**, then hit **Start** — last team standing wins.
 4. **Random Army** fills both sides instantly. **Reset** revives everyone to their setup positions.
