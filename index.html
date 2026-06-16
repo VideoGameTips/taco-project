@@ -57,6 +57,7 @@
       <div class="sec"><div class="lbl">💥 Strikes &nbsp;<span style="color:#ffd166">(mark a spot)</span></div><div class="grid" id="strikeGrid"></div></div>
       <div class="sec"><div class="lbl">🛠 Build map &nbsp;<span style="color:#ffd166">(drag ground/water)</span></div><div class="grid" id="buildGrid"></div></div>
       <div class="sec"><div class="lbl">🎮 Player &nbsp;<span style="color:#ffd166">(WASD · aim cursor · Space)</span></div><div class="grid" id="playerGrid"></div></div>
+      <div class="sec"><div class="lbl">📣 Orders &nbsp;<span style="color:#ffd166">(per selected team)</span></div><div class="grid" id="orderGrid"></div></div>
       <div class="sec"><div class="lbl">Map</div><select id="mapSel"></select></div>
     </div>
     <div id="controls">
@@ -259,6 +260,7 @@ const MAPS = [
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
 let plats = MAPS[0].build();
 let controlled = null; const keys = {}; const mouse = { x:640, y:360 };   // player-controlled soldier
+let orders = { red:'charge', blue:'charge' };   // per-team army command
 let units = [], projs = [], fx = [], hazards = [], strikes = [], screenFlash = 0;
 let waters = [], mapItems = [], buildDrag = null;   // custom-built terrain / hazards
 let brush = { team:'red', kind:'unit', skin:'soldier', weapon:'rifle', armor:'none', vehicle:'tank', strike:'missile', tool:'ground' };
@@ -305,13 +307,20 @@ const playerGrid=document.getElementById('playerGrid');
   el.innerHTML='<span class="em">🎮</span><span class="nm">Control unit<span class="st">click a soldier</span></span>';
   el.onclick=()=>{ brush.kind='control'; el.classList.add('sel'); clearSel(skinGrid); clearSel(weaponGrid); clearSel(vehicleGrid); clearSel(strikeGrid); clearSel(buildGrid); };
   playerGrid.appendChild(el); })();
+const ORDERS=[{id:'charge',name:'Charge',em:'⚔️'},{id:'hold',name:'Hold',em:'🛡️'},{id:'retreat',name:'Retreat',em:'🔙'},{id:'stop',name:'Stop',em:'✋'}];
+const orderGrid=document.getElementById('orderGrid');
+ORDERS.forEach(o=>{ const el=document.createElement('div'); el.className='chip';
+  el.innerHTML=`<span class="em">${o.em}</span><span class="nm">${o.name}</span>`;
+  el.onclick=()=>{ orders[brush.team]=o.id; refreshOrders(); toast((brush.team==='red'?'🔴 Red':'🔵 Blue')+' → '+o.name); }; orderGrid.appendChild(el); });
+function refreshOrders(){ [...orderGrid.children].forEach((c,i)=>c.classList.toggle('sel', ORDERS[i].id===orders[brush.team])); }
 function sel(grid,id,arr){ [...grid.children].forEach((c,i)=>c.classList.toggle('sel',arr[i].id===id)); }
 const mapSel=document.getElementById('mapSel');
 MAPS.forEach((m,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=m.name; mapSel.appendChild(o); });
 mapSel.onchange=()=>{ mapIndex=+mapSel.value; plats=MAPS[mapIndex].build(); waters=[]; mapItems=[]; };
 document.getElementById('teamRed').onclick=()=>setTeam('red');
 document.getElementById('teamBlue').onclick=()=>setTeam('blue');
-function setTeam(t){ brush.team=t; document.getElementById('teamRed').classList.toggle('sel',t==='red'); document.getElementById('teamBlue').classList.toggle('sel',t==='blue'); }
+function setTeam(t){ brush.team=t; document.getElementById('teamRed').classList.toggle('sel',t==='red'); document.getElementById('teamBlue').classList.toggle('sel',t==='blue'); refreshOrders(); }
+refreshOrders();
 const speedEl=document.getElementById('speed'), speedVal=document.getElementById('speedVal');
 speedEl.oninput=()=>{ speed=+speedEl.value; speedVal.textContent=speed+'×'; };
 const startBtn=document.getElementById('startBtn');
@@ -564,10 +573,11 @@ function updateVehicle(u,dt){
   if(t){
     const tcx=t.x, tcy=centerY(t), dx=tcx-u.x, dy=tcy-cyU, d=Math.hypot(dx,dy);
     u.face = dx>=0?1:-1; u.aim=Math.atan2(dy,dx);
-    const sp=vt.speed*BASE;
+    const sp=vt.speed*BASE, ord=orders[u.team]||'charge';
     if(u.domain==='ground'){
       const prefer=vt.range*0.7;
-      if(Math.abs(dx)>prefer){ u.vx+=Math.sign(dx)*sp*dt*8; u.moving=true; } else u.moving=false;
+      if(ord==='retreat'){ u.vx-=Math.sign(dx)*sp*dt*8; u.moving=true; }
+      else if(ord==='charge' && Math.abs(dx)>prefer){ u.vx+=Math.sign(dx)*sp*dt*8; u.moving=true; } else u.moving=false;
       u.vx=Math.max(-sp,Math.min(sp,u.vx));
       u.vy+=GRAV*dt; const pf=u.y; u.x+=u.vx*dt; u.y+=u.vy*dt;
       if(u.x<vt.w/2){u.x=vt.w/2;} if(u.x>W-vt.w/2){u.x=W-vt.w/2;}
@@ -576,13 +586,14 @@ function updateVehicle(u,dt){
       if(u.onGround) u.vx*=0.85;
       if(u.y>H+160){ u.alive=false; u.deadT=99; }
     } else {
-      u.vx+=Math.sign(dx||1)*sp*dt*6; u.vx=Math.max(-sp,Math.min(sp,u.vx)); u.x+=u.vx*dt;
+      if(ord==='retreat') u.vx-=Math.sign(dx||1)*sp*dt*6; else if(ord==='charge') u.vx+=Math.sign(dx||1)*sp*dt*6; else u.vx*=0.9;
+      u.vx=Math.max(-sp,Math.min(sp,u.vx)); u.x+=u.vx*dt;
       if(u.x<vt.w/2){u.x=vt.w/2;u.vx*=-1;} if(u.x>W-vt.w/2){u.x=W-vt.w/2;u.vx*=-1;}
       let desiredY=vt.alt; if(vt.hover) desiredY=Math.max(90,Math.min(GY-130, tcy-150));
       u.bob+=dt*3; u.y += (desiredY+Math.sin(u.bob)*6 - u.y)*Math.min(1,dt*2.5);
       u.moving=Math.abs(u.vx)>6;
     }
-    if(u.cd<=0){
+    if(u.cd<=0 && ord!=='stop'){
       if(vt.proj==='bomb'){ if(Math.abs(dx)<90 && tcy>cyU){ u.cd=vt.fireCd; vehicleFire(u,vt,tcx,tcy); } } // drop when overhead
       else if(d<=vt.range){ u.cd=vt.fireCd; vehicleFire(u,vt,tcx,tcy); }
     }
@@ -671,9 +682,13 @@ function updateBattle(dt){
       const inWater = waters.some(wr=> u.x>wr.x && u.x<wr.x+wr.w && u.y>wr.y-4 && u.y<wr.y+wr.h+10);
       const sp = u.speed*BASE*(u.slow>0?0.45:1)*armorById(u.armor).spd*(inWater?0.5:1);
       const ctrl = u.onGround?1:AIRCTRL;
-      if(w.cat==='ranged' && !los){ u.vx += Math.sign(dx)*sp*ctrl*dt*8; u.moving=true; }   // shot blocked → advance for a clear line
-      else if(Math.abs(dx)>prefer){ u.vx += Math.sign(dx)*sp*ctrl*dt*8; u.moving=true; }
-      else if(w.cat==='ranged' && Math.abs(dx)<w.range*0.32){ u.vx -= Math.sign(dx)*sp*ctrl*dt*6; u.moving=true; }
+      const ord = orders[u.team]||'charge';
+      if(ord==='retreat'){ u.vx -= Math.sign(dx)*sp*ctrl*dt*8; u.moving=true; }        // fall back toward own side
+      else if(ord==='charge'){
+        if(w.cat==='ranged' && !los){ u.vx += Math.sign(dx)*sp*ctrl*dt*8; u.moving=true; }   // shot blocked → advance for a clear line
+        else if(Math.abs(dx)>prefer){ u.vx += Math.sign(dx)*sp*ctrl*dt*8; u.moving=true; }
+        else if(w.cat==='ranged' && Math.abs(dx)<w.range*0.32){ u.vx -= Math.sign(dx)*sp*ctrl*dt*6; u.moving=true; }
+      }   // 'hold' = stand ground & fight; 'stop' = freeze (handled below)
       u.vx = Math.max(-sp,Math.min(sp,u.vx));
       // climb: hop up onto a ledge directly ahead (within climbable height)
       if(u.onGround && u.moving){ const ahead=u.x+u.face*(u.size+9);
@@ -681,7 +696,7 @@ function updateBattle(dt){
           if(h>6 && h<=u.size*7){ u.vy=-Math.sqrt(2*GRAV*(h+14)); break; } } } }
       if(w.cat==='ranged') u.aim=Math.atan2(cyT-cyU,t.x-u.x);
       // attack
-      if(d<=reach && u.cd<=0 && los){ u.cd=w.cd;
+      if(d<=reach && u.cd<=0 && los && ord!=='stop'){ u.cd=w.cd;
         if(w.cat==='melee'){ u.swing=1;
           const kx=u.face*w.knock, ky=-w.knock*0.55;
           damage(t,w.dmg,kx,ky,u);
