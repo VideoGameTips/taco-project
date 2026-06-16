@@ -157,6 +157,18 @@ const WEAPONS = [
   { id:'gasgrenade',name:'Gas Grenade',  em:'☠️', cat:'ranged', dmg:8,   range:320, cd:1900, speed:0, lob:true, aoe:20, knock:20,  hazard:'gas',  color:'#9bd36a' },
   { id:'c4',        name:'C4',           em:'🧱', cat:'ranged', dmg:150, range:300, cd:2600, speed:0, lob:true, aoe:0,  knock:480, hazard:'c4',   color:'#d0b048' },
 ];
+// per-weapon power rating (sword=60, pistol=120 as anchors)
+const WPOWER = { fists:20,knife:35,sword:60,spear:55,hammer:90,katana:70,
+  mace:70,battleaxe:85,greatsword:110,whip:45,scythe:90,chainsaw:60,
+  lightsabre:130,fireaxe:130,gravhammer:180,titanhammer:160,machete:100,combataxe:130,voltwhip:100,vampblade:100,
+  pistol:120,rifle:160,shotgun:150,sniper:260,minigun:180,rocket:220,flame:120,freeze:110,railgun:300,bow:130,
+  smg:140,revolver:150,crossbow:170,glauncher:190,flak:180,laser:220,plasma:180,lmg:170,cannon:280,harpoon:190,
+  m4a1:165,ak47:165,an94:170,garand:200,plasmacarb:150,arcrifle:160,coilgun:250,antimat:320,voidharv:300,solarlance:200,
+  rpg:260,bazooka:290,gravlaunch:230,mortar:230,nebula:270,stormcan:220,potato:150,boombow:220,
+  grenade:170,molotov:150,dynamite:210,gasgrenade:120,c4:200 };
+const weaponPower = id => WPOWER[id] || 50;
+function unitPower(u){ if(u.kind==='vehicle'){ const v=u.vt; return Math.round(v.hp/6 + v.dmg*1.5); }   // power rank
+  const s=skinById(u.skin), ar=armorById(u.armor); return Math.round( weaponPower(u.weapon) * (s.hp/100) * (1 + ar.dr + ar.hp/150) ); }
 
 /* ===================== ARMOUR (worn by units) ===================== */
 // dr = damage reduction (0-1), hp = bonus HP, spd = move multiplier
@@ -254,6 +266,31 @@ const MAPS = [
   { name:'Canyon', sky:['#241a12','#0e0a07'],
     build:()=>{ const a=[FULL]; a.push(rect(0,GY-300,120,300), rect(W-120,GY-300,120,300));
       a.push(rect(W/2-110,GY-160,220,24)); a.push(rect(300,GY-90,150,20), rect(W-450,GY-90,150,20)); return a; } },
+  { name:'🏰 Fortress', sky:['#0d1119','#06080d'],
+    build:()=>{ const a=[FULL];
+      // top frame
+      a.push(rect(487,29,396,30));        // top beam
+      a.push(rect(461,29,24,140));        // left drop
+      a.push(rect(448,166,55,30));        // left ledge
+      a.push(rect(493,180,360,29));       // lower beam
+      a.push(rect(845,58,38,151));        // right drop
+      // legs + main platform
+      a.push(rect(627,209,32,47), rect(685,209,32,47));
+      a.push(rect(544,256,410,30));       // wide platform
+      for(let i=0;i<4;i++) a.push(rect(954,292+i*40,30,14));   // right rungs
+      // columns to ground
+      a.push(rect(560,286,30,GY-286));    // left column
+      a.push(rect(835,286,30,GY-286));    // right column
+      for(let i=0;i<3;i++) a.push(rect(805,360+i*60,26,14));   // rungs left of right column
+      // lower-left outwork
+      a.push(rect(275,385,170,30));
+      a.push(rect(300,415,30,GY-415));
+      for(let i=0;i<4;i++) a.push(rect(284,455+i*55,16,12));    // rungs
+      // far-right rung tower
+      a.push(rect(990,470,28,GY-470));
+      for(let i=0;i<4;i++) a.push(rect(1018,490+i*40,22,12));
+      return a; },
+    items:()=>[{type:'barbwire',x:120,y:GY},{type:'barbwire',x:200,y:GY},{type:'barbwire',x:280,y:GY}] },
 ];
 
 /* ===================== STATE ===================== */
@@ -282,7 +319,7 @@ SKINS.forEach(s=>{ const el=document.createElement('div'); el.className='chip'+(
   el.onclick=()=>{ brush.kind='unit'; brush.skin=s.id; sel(skinGrid,s.id,SKINS); clearSel(vehicleGrid); }; skinGrid.appendChild(el); });
 const weaponGrid = document.getElementById('weaponGrid');
 WEAPONS.forEach(w=>{ const el=document.createElement('div'); el.className='chip'+(w.id===brush.weapon?' sel':'');
-  el.innerHTML=`<span class="em">${w.em}</span><span class="nm">${w.name}<span class="st">DMG ${w.dmg}${w.pellets>1?'×'+w.pellets:''} · ${w.cat==='melee'?'MEL':'RNG '+w.range}</span></span><span class="tag">${w.cat[0]}</span>`;
+  el.innerHTML=`<span class="em">${w.em}</span><span class="nm">${w.name}<span class="st">DMG ${w.dmg}${w.pellets>1?'×'+w.pellets:''} · ⚡${weaponPower(w.id)}</span></span><span class="tag">${w.cat[0]}</span>`;
   el.onclick=()=>{ brush.kind='unit'; brush.weapon=w.id; sel(weaponGrid,w.id,WEAPONS); clearSel(vehicleGrid); };
   el.ondblclick=()=>armEveryone(w.id); weaponGrid.appendChild(el); });
 const armorGrid = document.getElementById('armorGrid');
@@ -316,7 +353,7 @@ function refreshOrders(){ [...orderGrid.children].forEach((c,i)=>c.classList.tog
 function sel(grid,id,arr){ [...grid.children].forEach((c,i)=>c.classList.toggle('sel',arr[i].id===id)); }
 const mapSel=document.getElementById('mapSel');
 MAPS.forEach((m,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=m.name; mapSel.appendChild(o); });
-mapSel.onchange=()=>{ mapIndex=+mapSel.value; plats=MAPS[mapIndex].build(); waters=[]; mapItems=[]; };
+mapSel.onchange=()=>{ mapIndex=+mapSel.value; plats=MAPS[mapIndex].build(); waters=[]; mapItems=MAPS[mapIndex].items?MAPS[mapIndex].items():[]; };
 document.getElementById('teamRed').onclick=()=>setTeam('red');
 document.getElementById('teamBlue').onclick=()=>setTeam('blue');
 function setTeam(t){ brush.team=t; document.getElementById('teamRed').classList.toggle('sel',t==='red'); document.getElementById('teamBlue').classList.toggle('sel',t==='blue'); refreshOrders(); }
@@ -1203,9 +1240,10 @@ function render(){
   if(controlled && controlled.alive && units.includes(controlled)){ const u=controlled, my=u.y-u.size*3.6;
     ctx.fillStyle='#ffd166'; ctx.beginPath(); ctx.moveTo(u.x,my+9); ctx.lineTo(u.x-7,my); ctx.lineTo(u.x+7,my); ctx.closePath(); ctx.fill();
     if(mode==='battle'){ ctx.strokeStyle='#ffd166aa'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(mouse.x,mouse.y,9,0,7); ctx.moveTo(mouse.x-14,mouse.y); ctx.lineTo(mouse.x-4,mouse.y); ctx.moveTo(mouse.x+4,mouse.y); ctx.lineTo(mouse.x+14,mouse.y); ctx.moveTo(mouse.x,mouse.y-14); ctx.lineTo(mouse.x,mouse.y-4); ctx.moveTo(mouse.x,mouse.y+4); ctx.lineTo(mouse.x,mouse.y+14); ctx.stroke(); } }
-  // counts
-  document.getElementById('cRed').textContent  = units.filter(u=>u.alive&&u.team==='red').length;
-  document.getElementById('cBlue').textContent = units.filter(u=>u.alive&&u.team==='blue').length;
+  // counts + army power
+  const rA=units.filter(u=>u.alive&&u.team==='red'), bA=units.filter(u=>u.alive&&u.team==='blue');
+  document.getElementById('cRed').textContent  = rA.length+' · ⚡'+rA.reduce((s,u)=>s+unitPower(u),0);
+  document.getElementById('cBlue').textContent = bA.length+' · ⚡'+bA.reduce((s,u)=>s+unitPower(u),0);
   if(toastT>0){ ctx.globalAlpha=Math.min(1,toastT); ctx.fillStyle='#ffd166'; ctx.font='bold 20px Segoe UI';
     ctx.textAlign='center'; ctx.fillText(toastMsg,W/2,60); ctx.globalAlpha=1; ctx.textAlign='left'; }
   if(screenFlash>0){ ctx.globalAlpha=Math.min(0.85,screenFlash); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1; }   // nuke flash
