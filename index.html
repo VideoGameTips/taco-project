@@ -59,6 +59,7 @@
       <div class="sec"><div class="lbl">🎮 Player &nbsp;<span style="color:#ffd166">(WASD · aim cursor · Space)</span></div><div class="grid" id="playerGrid"></div></div>
       <div class="sec"><div class="lbl">📣 Orders &nbsp;<span style="color:#ffd166">(per selected team)</span></div><div class="grid" id="orderGrid"></div></div>
       <div class="sec"><div class="lbl">Map</div><select id="mapSel"></select></div>
+      <div class="sec"><div class="lbl">🎯 Levels &nbsp;<span style="color:#ffd166">(beat the garrison)</span></div><div class="grid" id="levelGrid"></div></div>
     </div>
     <div id="controls">
       <div class="speedrow">Speed <input type="range" id="speed" min="0.25" max="3" step="0.25" value="1"><span id="speedVal">1×</span></div>
@@ -157,18 +158,21 @@ const WEAPONS = [
   { id:'gasgrenade',name:'Gas Grenade',  em:'☠️', cat:'ranged', dmg:8,   range:320, cd:1900, speed:0, lob:true, aoe:20, knock:20,  hazard:'gas',  color:'#9bd36a' },
   { id:'c4',        name:'C4',           em:'🧱', cat:'ranged', dmg:150, range:300, cd:2600, speed:0, lob:true, aoe:0,  knock:480, hazard:'c4',   color:'#d0b048' },
 ];
-// per-weapon power rating (sword=60, pistol=120 as anchors)
-const WPOWER = { fists:20,knife:35,sword:60,spear:55,hammer:90,katana:70,
-  mace:70,battleaxe:85,greatsword:110,whip:45,scythe:90,chainsaw:60,
-  lightsabre:130,fireaxe:130,gravhammer:180,titanhammer:160,machete:100,combataxe:130,voltwhip:100,vampblade:100,
-  pistol:120,rifle:160,shotgun:150,sniper:260,minigun:180,rocket:220,flame:120,freeze:110,railgun:300,bow:130,
-  smg:140,revolver:150,crossbow:170,glauncher:190,flak:180,laser:220,plasma:180,lmg:170,cannon:280,harpoon:190,
-  m4a1:165,ak47:165,an94:170,garand:200,plasmacarb:150,arcrifle:160,coilgun:250,antimat:320,voidharv:300,solarlance:200,
-  rpg:260,bazooka:290,gravlaunch:230,mortar:230,nebula:270,stormcan:220,potato:150,boombow:220,
-  grenade:170,molotov:150,dynamite:210,gasgrenade:120,c4:200 };
-const weaponPower = id => WPOWER[id] || 50;
-function unitPower(u){ if(u.kind==='vehicle'){ const v=u.vt; return Math.round(v.hp/6 + v.dmg*1.5); }   // power rank
-  const s=skinById(u.skin), ar=armorById(u.armor); return Math.round( weaponPower(u.weapon) * (s.hp/100) * (1 + ar.dr + ar.hp/150) ); }
+// weapon power = first-shot (alpha) + DPS + range + AOE + special effects
+function weaponPower(id){ const w=wepById(id); if(!w) return 50;
+  const pel=w.pellets||1, cd=w.cd||500;
+  const first = w.dmg*pel;                                   // first-shot damage (alpha)
+  const dps   = first/(cd/1000);                             // sustained — can it outlast
+  const rangeF= (w.cat==='melee'? w.range*0.25 : 18 + w.range*0.12);   // ranged carry a reach premium
+  const aoeF  = (w.aoe||0)*0.6;
+  let sp = 0;                                                // special effects (counted after)
+  if(w.pierce) sp += first*0.4; if(w.slow) sp += 25; if(w.soft) sp += 15; if(w.lob) sp += 12; if(w.hazard) sp += 28;
+  return Math.round( first*0.9 + dps*0.7 + rangeF + aoeF + sp );
+}
+// unit power = weapon power graded by health, speed, and armour
+function unitPower(u){ if(u.kind==='vehicle'){ const v=u.vt; return Math.round(v.hp/6 + v.dmg*1.5 + (v.aoe||0)*0.6); }
+  const s=skinById(u.skin), ar=armorById(u.armor);
+  return Math.round( weaponPower(u.weapon) * ((s.hp+ar.hp)/100) * (0.7 + s.speed*0.3) * (1 + ar.dr) ); }
 
 /* ===================== ARMOUR (worn by units) ===================== */
 // dr = damage reduction (0-1), hp = bonus HP, spd = move multiplier
@@ -213,6 +217,26 @@ const VEHICLES = [
   { id:'mortarcar',  name:'Mortar Carrier',em:'🎇',gfx:'apc',       domain:'ground', hp:480, speed:0.6,  w:84,  h:44, color:'#5a5a4a', fireCd:1800, dmg:80,  range:760,  proj:'arc',    pspeed:0,   aoe:70,  knock:300, pcolor:'#9aa8b0' },
 ];
 const vehById = id => VEHICLES.find(v=>v.id===id);
+
+/* ===================== LEVELS (challenge scenarios — beat the garrison within a budget) ===================== */
+// foe always 'blue' (defender, right side); player is 'red' (attacker, left side).
+const LEVELS = [
+  { name:'1 · Outpost', map:'Flat Field', limitType:'power', limit:380, brief:'Crack the picket line',
+    place(g,U,V){ U(900,'soldier','rifle'); U(960,'soldier','rifle'); U(1020,'soldier','rifle'); U(1080,'soldier','shotgun'); V(1160,'apc'); } },
+  { name:'2 · Sniper Nest', map:'Twin Towers', limitType:'power', limit:460, brief:'Storm the towers',
+    place(g,U,V){ U(1055,'soldier','sniper'); U(640,'soldier','sniper'); U(900,'soldier','rifle'); U(970,'soldier','rifle'); U(1040,'knight','smg'); } },
+  { name:'3 · Bridge Hold', map:'Sky Bridge', limitType:'power', limit:520, brief:'Take the span',
+    place(g,U,V){ [600,690,780,860].forEach(x=>U(x,'soldier','rifle')); U(900,'soldier','sniper'); V(1130,'tank'); } },
+  { name:'4 · Armored Column', map:'Flat Field', limitType:'power', limit:780, brief:'Stop the tanks',
+    place(g,U,V){ V(940,'tank'); V(1070,'tank'); V(1200,'artillery'); U(850,'soldier','rifle'); U(890,'soldier','rifle'); } },
+  { name:'5 · Air Defense', map:'Flat Field', limitType:'power', limit:680, brief:'Bring aircraft!',
+    place(g,U,V){ V(900,'flaktank'); V(1060,'flaktank'); U(820,'soldier','rifle'); U(870,'soldier','rifle'); U(1170,'soldier','sniper'); } },
+  { name:'6 · Fortress Siege', map:'🏰 Fortress', limitType:'power', limit:980, brief:'Breach the keep',
+    place(g,U,V){ U(700,'soldier','sniper'); U(880,'soldier','sniper'); U(620,'soldier','rifle'); U(940,'knight','rifle'); U(370,'soldier','rifle'); V(1050,'tank'); } },
+  { name:'7 · BOSS: Juggernaut', map:'Flat Field', limitType:'units', limit:6, brief:'6 units max — slay the titan',
+    place(g,U,V){ units.push(makeUnit(1050,g(1050),'blue','giant','titanhammer','jugg')); U(900,'knight','sword','tactical'); U(960,'knight','sword','tactical'); U(1160,'soldier','sniper'); } },
+];
+let level = null, playerTeam = null;
 
 /* ===================== STRIKES (one-use called-in attacks) ===================== */
 const STRIKES = [
@@ -350,6 +374,13 @@ ORDERS.forEach(o=>{ const el=document.createElement('div'); el.className='chip';
   el.innerHTML=`<span class="em">${o.em}</span><span class="nm">${o.name}</span>`;
   el.onclick=()=>{ orders[brush.team]=o.id; refreshOrders(); toast((brush.team==='red'?'🔴 Red':'🔵 Blue')+' → '+o.name); }; orderGrid.appendChild(el); });
 function refreshOrders(){ [...orderGrid.children].forEach((c,i)=>c.classList.toggle('sel', ORDERS[i].id===orders[brush.team])); }
+const levelGrid=document.getElementById('levelGrid');
+LEVELS.forEach((L,i)=>{ const el=document.createElement('div'); el.className='chip';
+  el.innerHTML=`<span class="em">🎯</span><span class="nm">${L.name}<span class="st">${L.limitType==='units'?L.limit+' units':'⚡'+L.limit} · ${L.brief}</span></span>`;
+  el.onclick=()=>{ loadLevel(i); [...levelGrid.children].forEach((c,j)=>c.classList.toggle('sel',j===i)); }; levelGrid.appendChild(el); });
+(()=>{ const el=document.createElement('div'); el.className='chip';
+  el.innerHTML='<span class="em">✕</span><span class="nm">Sandbox<span class="st">exit level</span></span>';
+  el.onclick=()=>{ level=null; playerTeam=null; clearSel(levelGrid); toast('Sandbox mode'); }; levelGrid.appendChild(el); })();
 function sel(grid,id,arr){ [...grid.children].forEach((c,i)=>c.classList.toggle('sel',arr[i].id===id)); }
 const mapSel=document.getElementById('mapSel');
 MAPS.forEach((m,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=m.name; mapSel.appendChild(o); });
@@ -363,7 +394,7 @@ speedEl.oninput=()=>{ speed=+speedEl.value; speedVal.textContent=speed+'×'; };
 const startBtn=document.getElementById('startBtn');
 startBtn.onclick=toggleBattle;
 document.getElementById('resetBtn').onclick=resetBattle;
-document.getElementById('clearBtn').onclick=()=>{ units=[];projs=[];fx=[];hazards=[];strikes=[];screenFlash=0;controlled=null; setMode('setup'); };
+document.getElementById('clearBtn').onclick=()=>{ units=[];projs=[];fx=[];hazards=[];strikes=[];screenFlash=0;controlled=null;level=null; setMode('setup'); };
 document.getElementById('randBtn').onclick=randomArmy;
 function saveMap(){ const R=r=>[Math.round(r.x),Math.round(r.y),Math.round(r.w),Math.round(r.h)];
   const data={ p:plats.map(R), w:waters.map(R),
@@ -373,7 +404,7 @@ function saveMap(){ const R=r=>[Math.round(r.x),Math.round(r.y),Math.round(r.w),
     s:strikes.map(m=>[m.sid,m.team,Math.round(m.x)]) };
   return btoa(JSON.stringify(data)); }
 function loadMap(str){ const d=JSON.parse(atob(str.trim()));
-  units=[];projs=[];fx=[];hazards=[];strikes=[];screenFlash=0;buildDrag=null;controlled=null;
+  units=[];projs=[];fx=[];hazards=[];strikes=[];screenFlash=0;buildDrag=null;controlled=null;level=null;
   plats=(d.p||[]).map(a=>rect(a[0],a[1],a[2],a[3]));
   waters=(d.w||[]).map(a=>rect(a[0],a[1],a[2],a[3]));
   mapItems=(d.i||[]).map(a=>({type:a[0],x:a[1],y:a[2],armed:a[0]==='mine'}));
@@ -392,7 +423,7 @@ addEventListener('keydown',e=>{ const k=e.key.toLowerCase();
     else toggleBattle();
     return; }
   keys[k]=true;
-  if(k==='r')resetBattle(); else if(k==='c'){units=[];projs=[];fx=[];hazards=[];strikes=[];screenFlash=0;controlled=null;setMode('setup');} });
+  if(k==='r')resetBattle(); else if(k==='c'){units=[];projs=[];fx=[];hazards=[];strikes=[];screenFlash=0;controlled=null;level=null;setMode('setup');} });
 addEventListener('keyup',e=>{ if(e.code==='Space'){keys[' ']=false;return;} keys[e.key.toLowerCase()]=false; });
 cv.addEventListener('mousemove',e=>{ const p=toWorld(e); mouse.x=p.x; mouse.y=p.y; });
 
@@ -420,10 +451,29 @@ function makeUnit(x,feetY,team,skinId,weaponId,armorId='none'){
     swing:0, hit:0, flash:0, recoil:0, aim:undefined, moving:false, walk:0,
     climbing:false, climbWall:null, lean:0, leanV:0, hipKick:0, hipKickV:0, lock:null, deadT:0, ragA:0, ragV:0, ragTarget:0 };
 }
+function brushPower(){ if(brush.kind==='vehicle'){ const v=vehById(brush.vehicle); return Math.round(v.hp/6+v.dmg*1.5); }
+  const s=skinById(brush.skin), ar=armorById(brush.armor); return Math.round(weaponPower(brush.weapon)*(s.hp/100)*(1+ar.dr+ar.hp/150)); }
+function levelBlocks(extra){ if(!level) return false;            // returns true if placement not allowed
+  if(brush.team!==playerTeam){ toast('Place your ('+playerTeam+') units only'); return true; }
+  const mine=units.filter(u=>u.team===playerTeam);
+  if(level.limitType==='units'){ if(mine.length>=level.limit){ toast('Unit limit reached ('+level.limit+')'); return true; } return false; }
+  if(mine.reduce((s,u)=>s+unitPower(u),0)+extra > level.limit){ toast('Over power budget!'); return true; } return false; }
 function spawnUnit(x,y){
   const s=skinById(brush.skin); if(x<14||x>W-14) return;
+  if(levelBlocks(brushPower())) return;
   let top=surfaceUnder(x,y); if(top===null) top=y;       // no ground under cursor → drop (may fall into pit)
   units.push(makeUnit(x,top,brush.team,brush.skin,brush.weapon,brush.armor));
+}
+function loadLevel(i){ const L=LEVELS[i]; level=L; playerTeam='red';
+  let mi=MAPS.findIndex(m=>m.name===L.map); if(mi<0)mi=1; mapIndex=mi; mapSel.value=mi;
+  plats=MAPS[mi].build(); waters=[]; mapItems=MAPS[mi].items?MAPS[mi].items():[];
+  units=[];projs=[];fx=[];hazards=[];strikes=[];screenFlash=0;controlled=null;
+  const g=x=>{const t=surfaceUnder(x,0); return t===null?GY:t;};
+  const U=(x,sk,w,a)=>units.push(makeUnit(x,g(x),'blue',sk,w,a||'none'));
+  const V=(x,v)=>units.push(makeVehicle(x, vehById(v).domain==='air'?0:g(x),'blue',v));
+  L.place(g,U,V);
+  setTeam('red'); brush.kind='unit';
+  setMode('setup'); toast('🎯 '+L.name+' — '+L.brief);
 }
 function makeVehicle(x,baseY,team,vid){ const vt=vehById(vid); const air=vt.domain==='air';
   return { kind:'vehicle', vt, vid, domain:vt.domain, team, x, y: air?vt.alt:baseY, sx:x, sy: air?vt.alt:baseY,
@@ -432,6 +482,7 @@ function makeVehicle(x,baseY,team,vid){ const vt=vehById(vid); const air=vt.doma
     moving:false, walk:0, bob:Math.random()*6, deadT:0, ragA:0, ragV:0, crashFall:false, slow:0 };
 }
 function spawnVehicle(x,y){ const vt=vehById(brush.vehicle); if(!vt||x<40||x>W-40) return;
+  if(levelBlocks(brushPower())) return;
   if(vt.domain==='air'){ units.push(makeVehicle(x,0,brush.team,brush.vehicle)); }
   else { let top=surfaceUnder(x,y); if(top===null) top=GY; units.push(makeVehicle(x,top,brush.team,brush.vehicle)); }
 }
@@ -479,7 +530,7 @@ function eraseAt(x,y){
 function armEveryone(wid){ units.forEach(u=>u.weapon=wid); toast('Armed '+units.length+' fighters with '+wepById(wid).name); }
 let toastT=0,toastMsg='';
 function toast(m){ toastMsg=m; toastT=1.6; }
-function randomArmy(){ units=[];projs=[];fx=[];hazards=[];strikes=[];screenFlash=0;controlled=null; setMode('setup');
+function randomArmy(){ units=[];projs=[];fx=[];hazards=[];strikes=[];screenFlash=0;controlled=null;level=null; setMode('setup');
   for(const team of ['red','blue']){ const x0= team==='red'?120:W-380;
     for(let i=0;i<8;i++){ const s=SKINS[(Math.random()*SKINS.length)|0], w=WEAPONS[(Math.random()*WEAPONS.length)|0], a=ARMORS[(Math.random()*ARMORS.length)|0];
       const x=x0+Math.random()*260; let top=surfaceUnder(x,0); if(top===null)top=GY;
@@ -788,7 +839,9 @@ function updateBattle(dt){
   units=units.filter(u=> u.alive || u.deadT < (u.kind==='vehicle'?4:10));   // corpses linger 10s
   const r=units.filter(u=>u.alive&&u.team==='red').length, b=units.filter(u=>u.alive&&u.team==='blue').length;
   if((r===0||b===0) && units.length){ setMode('over'); const bt=document.getElementById('bTitle');
-    if(r===0&&b===0){bt.textContent='Mutual Destruction';bt.style.color='#fff';}
+    if(level){ const won = playerTeam==='red'? b===0 : r===0;
+      bt.textContent = won? '🎉 LEVEL CLEARED' : '💀 DEFEATED'; bt.style.color = won? '#3fb950' : '#f85149'; }
+    else if(r===0&&b===0){bt.textContent='Mutual Destruction';bt.style.color='#fff';}
     else if(b===0){bt.textContent='🔴 Red Wins!';bt.style.color='var(--red)';}
     else {bt.textContent='🔵 Blue Wins!';bt.style.color='var(--blue)';} }
 }
@@ -1232,6 +1285,13 @@ function render(){
       grd.addColorStop(0,'#fff'); grd.addColorStop(0.4,f.color); grd.addColorStop(1,'rgba(255,140,0,0)'); ctx.fillStyle=grd;
       ctx.beginPath(); ctx.moveTo(0,-5); ctx.lineTo(len,0); ctx.lineTo(0,5); ctx.closePath(); ctx.fill();                          // hot cone
       ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(0,0,3.5*k+1.5,0,7); ctx.fill(); ctx.globalAlpha=1; ctx.restore(); } }
+  // level budget HUD
+  if(level){ const mine=units.filter(u=>u.team===playerTeam);
+    const used = level.limitType==='units'? mine.length : mine.reduce((s,u)=>s+unitPower(u),0);
+    const over = used>level.limit;
+    ctx.font='bold 18px Segoe UI'; ctx.textAlign='center'; ctx.fillStyle=over?'#f85149':'#ffd166';
+    ctx.fillText(level.name+'  ·  '+(level.limitType==='units'?('Units '+used+'/'+level.limit):('⚡ '+used+'/'+level.limit))+'  ·  '+level.brief, W/2, 92);
+    ctx.textAlign='left'; }
   // build drag preview
   if(buildDrag){ const r=normRect(buildDrag); const water=brush.tool==='water';
     ctx.fillStyle=water?'rgba(54,126,196,0.3)':'rgba(120,140,90,0.35)'; ctx.fillRect(r.x,r.y,r.w,r.h);
