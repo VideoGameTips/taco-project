@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mech Battles</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#0a0e14; font-family:'Segoe UI',system-ui,sans-serif; color:#cdd6e4; }
+  #c { display:block; width:100%; height:100%; position:fixed; inset:0; z-index:1; }
+  /* full-screen backdrop behind the shared canvas */
+  #bg { position:fixed; inset:0; z-index:0; background:radial-gradient(ellipse at 50% 0%, #16202e 0%, #0a0e14 70%); }
+
+  /* ---- Garage / customization overlay ---- */
+  #garage {
+    position:fixed; inset:0; z-index:20; display:flex; flex-direction:column;
+    background:transparent; pointer-events:none;
+  }
+  #garage h1, #garage .sub, #picker, #stats, #deploy { pointer-events:auto; }
+  #garage h1 { text-align:center; padding:18px 0 4px; font-size:30px; letter-spacing:4px; color:#7fd7ff;
+    text-shadow:0 0 18px rgba(80,200,255,.5); }
+  #garage .sub { text-align:center; font-size:13px; color:#6b7a90; margin-bottom:8px; }
+  #garageBody { flex:1; display:flex; min-height:0; }
+  #picker { width:340px; overflow-y:auto; padding:10px 14px; border-right:1px solid #1d2a3c; background:rgba(10,14,20,.72); }
+  #preview { flex:1; position:relative; }
+  #stats { width:230px; padding:14px; border-left:1px solid #1d2a3c; font-size:13px; background:rgba(10,14,20,.72); }
+  .slot { margin-bottom:14px; }
+  .slot h3 { font-size:12px; text-transform:uppercase; letter-spacing:2px; color:#5e90c0; margin-bottom:6px; }
+  .opts { display:flex; flex-wrap:wrap; gap:6px; }
+  .opt {
+    padding:6px 10px; font-size:12px; border:1px solid #2a3a52; border-radius:6px; cursor:pointer;
+    background:#121a26; color:#9fb2c9; user-select:none; transition:.12s;
+  }
+  .opt:hover { border-color:#3d5a80; color:#cfe2f5; }
+  .opt.sel { background:#1d4d6e; border-color:#4fb4ff; color:#eaf6ff; box-shadow:0 0 10px rgba(79,180,255,.35); }
+  #stats h3 { font-size:12px; text-transform:uppercase; letter-spacing:2px; color:#5e90c0; margin-bottom:10px; }
+  .stat { margin-bottom:9px; }
+  .stat .lab { display:flex; justify-content:space-between; font-size:11px; color:#8aa0bb; margin-bottom:3px; }
+  .bar { height:7px; background:#16202e; border-radius:4px; overflow:hidden; }
+  .bar > i { display:block; height:100%; background:linear-gradient(90deg,#2e7fc4,#5fd0ff); }
+  #deploy {
+    display:block; width:100%; margin-top:18px; padding:13px; font-size:16px; letter-spacing:3px;
+    background:linear-gradient(180deg,#1f6fae,#0f4f80); color:#eaf6ff; border:1px solid #4fb4ff;
+    border-radius:8px; cursor:pointer; font-weight:600;
+  }
+  #deploy:hover { background:linear-gradient(180deg,#2a86cf,#15639e); box-shadow:0 0 16px rgba(79,180,255,.4); }
+
+  /* ---- HUD ---- */
+  #hud { position:fixed; inset:0; z-index:10; pointer-events:none; display:none; }
+  #hpwrap { position:absolute; left:20px; bottom:20px; width:280px; }
+  #hpwrap .label { font-size:11px; letter-spacing:2px; color:#9fb2c9; margin-bottom:4px; }
+  #hpbar { height:16px; background:#16202e; border:1px solid #2a3a52; border-radius:5px; overflow:hidden; }
+  #hpbar > i { display:block; height:100%; width:100%; background:linear-gradient(90deg,#37c871,#7ff0a8); transition:width .15s; }
+  #boostbar { height:7px; margin-top:5px; background:#16202e; border:1px solid #2a3a52; border-radius:5px; overflow:hidden; }
+  #boostbar > i { display:block; height:100%; width:100%; background:linear-gradient(90deg,#c4882e,#ffce5f); }
+  #weapons { position:absolute; right:20px; bottom:20px; display:flex; gap:10px; }
+  .wcard { width:120px; padding:8px 10px; background:rgba(18,26,38,.8); border:1px solid #2a3a52; border-radius:7px; font-size:12px; }
+  .wcard .wn { color:#7fd7ff; font-weight:600; margin-bottom:3px; }
+  .wcard .wk { color:#7a8aa0; font-size:10px; }
+  .wcard .cd { height:4px; margin-top:5px; background:#16202e; border-radius:3px; overflow:hidden; }
+  .wcard .cd > i { display:block; height:100%; width:100%; background:#ff7a59; }
+  #crosshair { position:absolute; left:50%; top:50%; width:22px; height:22px; transform:translate(-50%,-50%);
+    border:2px solid rgba(127,215,255,.7); border-radius:50%; }
+  #crosshair:before, #crosshair:after { content:''; position:absolute; background:rgba(127,215,255,.7); }
+  #crosshair:before { left:50%; top:-7px; width:2px; height:6px; transform:translateX(-50%); }
+  #crosshair:after { left:50%; bottom:-7px; width:2px; height:6px; transform:translateX(-50%); }
+  #enemyCount { position:absolute; top:16px; left:50%; transform:translateX(-50%); font-size:15px; letter-spacing:2px; color:#cfe2f5; }
+  #hint { position:absolute; top:16px; left:20px; font-size:12px; color:#6b7a90; line-height:1.6; }
+
+  /* ---- End screen ---- */
+  #end { position:fixed; inset:0; z-index:30; display:none; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(6,10,16,.82); }
+  #end h2 { font-size:46px; letter-spacing:6px; margin-bottom:12px; }
+  #end p { color:#9fb2c9; margin-bottom:22px; }
+  #end button { padding:12px 28px; font-size:15px; letter-spacing:2px; background:#1d4d6e; border:1px solid #4fb4ff;
+    color:#eaf6ff; border-radius:8px; cursor:pointer; }
+
+  /* ---- Touch controls (mobile) ---- */
+  #c { touch-action:none; }
+  #touch { position:fixed; inset:0; z-index:15; display:none; touch-action:none; }
+  #touch .zone { position:absolute; bottom:0; top:0; width:50%; }
+  #moveZone { left:0; } #aimZone { right:0; }
+  #touch .stick { position:absolute; width:130px; height:130px; margin:-65px; border-radius:50%;
+    border:2px solid rgba(127,215,255,.4); background:rgba(20,30,45,.28); display:none; pointer-events:none; }
+  #touch .stick > i { position:absolute; left:50%; top:50%; width:58px; height:58px; margin:-29px;
+    border-radius:50%; background:rgba(127,215,255,.5); transform:translate(-50%,-50%); }
+  #touch .tbtn { position:absolute; pointer-events:auto; display:flex; align-items:center; justify-content:center;
+    border-radius:50%; color:#eaf6ff; font-weight:700; user-select:none; letter-spacing:1px;
+    border:2px solid rgba(127,215,255,.5); background:rgba(20,42,64,.5); }
+  #touch .tbtn.on { background:rgba(79,180,255,.55); }
+  #touch .tbtn.fire { width:92px; height:92px; font-size:22px; }
+  #btnR { right:24px; bottom:96px; }
+  #btnL { right:124px; bottom:158px; }
+  #btnBoost { right:34px; bottom:212px; width:74px; height:74px; font-size:13px;
+    background:rgba(70,50,20,.5); border-color:rgba(255,180,90,.55); }
+  #btnBoost.on { background:rgba(255,180,90,.5); }
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<canvas id="c"></canvas>
+
+<!-- ============ GARAGE ============ -->
+<div id="garage">
+  <h1>MECH BATTLES</h1>
+  <div class="sub">Build your machine. Then deploy.</div>
+  <div id="garageBody">
+    <div id="picker"></div>
+    <div id="preview"></div>
+    <div id="stats">
+      <h3>Loadout Stats</h3>
+      <div id="statBars"></div>
+      <button id="deploy">DEPLOY ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ HUD ============ -->
+<div id="hud">
+  <div id="crosshair"></div>
+  <div id="enemyCount"></div>
+  <div id="hint">WASD move &nbsp;·&nbsp; Mouse aim &nbsp;·&nbsp; L-click L.arm &nbsp;·&nbsp; R-click R.arm &nbsp;·&nbsp; Shift boost</div>
+  <div id="hpwrap">
+    <div class="label">CHASSIS INTEGRITY</div>
+    <div id="hpbar"><i></i></div>
+    <div id="boostbar"><i></i></div>
+  </div>
+  <div id="weapons"></div>
+</div>
+
+<!-- ============ TOUCH CONTROLS ============ -->
+<div id="touch">
+  <div id="moveZone" class="zone"></div>
+  <div id="aimZone" class="zone"></div>
+  <div id="moveStick" class="stick"><i></i></div>
+  <div id="aimStick" class="stick"><i></i></div>
+  <div id="btnBoost" class="tbtn">BOOST</div>
+  <div id="btnL" class="tbtn fire">L</div>
+  <div id="btnR" class="tbtn fire">R</div>
+</div>
+
+<!-- ============ END ============ -->
+<div id="end">
+  <h2 id="endTitle"></h2>
+  <p id="endText"></p>
+  <button onclick="location.reload()">RETURN TO GARAGE</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// =====================================================================
+//  MECH BATTLES — single-file Three.js prototype
+//  Mechs are assembled from swappable parts: TORSO, LEGS, two ARMS, BACKPACK
+// =====================================================================
+
+// ---------- PARTS CATALOG ----------
+// Each part contributes color/size + stat modifiers. Weapons live on arms.
+const TORSOS = {
+  scout:  { name:'Recon Frame',  hp:45,  spd:1.45, size:0.9, col:0x4ad9b0 },
+  light:  { name:'Light Frame',  hp:60,  spd:1.25, size:1.0, col:0x4a90d9 },
+  medium: { name:'Assault Hull', hp:100, spd:1.0,  size:1.15,col:0x6a7b8c },
+  vanguard:{name:'Vanguard',     hp:130, spd:0.92, size:1.22,col:0x6a7b8c },
+  heavy:  { name:'Siege Bulwark',hp:170, spd:0.78, size:1.35,col:0x8a6a4a },
+  titan:  { name:'Titan Core',   hp:230, spd:0.62, size:1.55,col:0x9a5a3a },
+};
+const ARMORS = {
+  none:    { name:'Stripped',  dr:0.00, spd:0,     col:0x556070 },
+  nanoweave:{name:'Nanoweave', dr:0.22, spd:-0.03, col:0x5a8a7a },
+  plate:   { name:'Plating',   dr:0.18, spd:-0.05, col:0x7d8a9c },
+  composite:{name:'Composite', dr:0.26, spd:-0.10, col:0x6a7a8c },
+  reactive:{ name:'Reactive',  dr:0.34, spd:-0.14, col:0xb08a4a },
+  ablative:{ name:'Ablative',  dr:0.42, spd:-0.20, col:0x8a8a6a },
+};
+const LEGS = {
+  biped:  { name:'Bipedal',  spd:1.0,  turn:2.6, kind:'legs',  col:0x55606e },
+  raptor: { name:'Raptor',   spd:1.25, turn:3.0, kind:'legs',  col:0x5a5040 },
+  wheels: { name:'Wheels',   spd:1.45, turn:2.0, kind:'wheel', col:0x3a4250 },
+  omni:   { name:'Omniwheel',spd:1.5,  turn:3.2, kind:'wheel', col:0x3a4a55 },
+  tracks: { name:'Tracks',   spd:0.85, turn:1.7, kind:'track', col:0x4a4030, hp:30 },
+  treads: { name:'Heavy Treads',spd:0.68,turn:1.4,kind:'track',col:0x3a3526, hp:55 },
+  spider: { name:'Spider',   spd:1.1,  turn:3.2, kind:'spider',col:0x405a4a },
+  hover:  { name:'Hover Jets',spd:1.55, turn:3.4, kind:'hover', col:0x3a5a7a },
+};
+// type: ranged | hitscan | melee.  cd in seconds.  gfx = silhouette (defaults to id).
+// Stats ported/adapted from the PVP roster (pvp-game/public/game.js): cd = fireRate/1000-ish.
+const WEAPONS = {
+  none:    { name:'Empty',       type:'none' },
+  // --- core ---
+  cannon:  { name:'Cannon',      type:'ranged', dmg:34, cd:1.1, range:90, pspd:70, col:0x9aa6b4, splash:6 },
+  mg:      { name:'Autocannon',  type:'ranged', dmg:7,  cd:0.12,range:70, pspd:95, col:0x7a8694, gfx:'mg' },
+  rockets: { name:'Rocket Pod',  type:'ranged', dmg:18, cd:0.5, range:80, pspd:55, col:0xb47a4a, splash:9, salvo:3, gfx:'rockets' },
+  laser:   { name:'Laser',       type:'hitscan',dmg:26, cd:0.7, range:100,col:0xff5a6a, gfx:'laser' },
+  chainsaw:{ name:'Chainsaw',    type:'melee',  dmg:42, cd:0.45,range:7,  col:0xd0d8e0, gfx:'chainsaw' },
+  hammer:  { name:'War Hammer',  type:'melee',  dmg:60, cd:0.9, range:8,  col:0x9a8a6a, splash:5, gfx:'hammer' },
+  shield:  { name:'Shield',      type:'shield', dr:0.5, col:0x4a6a9a },
+  // --- ported from PVP: ballistic / heavy ---
+  minigun: { name:'Minigun',     type:'ranged', dmg:6,  cd:0.07,range:65, pspd:100,col:0xcfae5a, gfx:'minigun' },
+  railgun: { name:'Railgun',     type:'ranged', dmg:85, cd:1.6, range:120,pspd:140,col:0x66ccff, pierce:true, gfx:'rail' },
+  coilgun: { name:'Coilgun',     type:'ranged', dmg:60, cd:1.2, range:110,pspd:120,col:0x88ddff, pierce:true, gfx:'rail' },
+  amr:     { name:'Anti-Material',type:'ranged',dmg:70, cd:1.4, range:130,pspd:150,col:0xd0c090, pierce:true, gfx:'sniper' },
+  grenade: { name:'Grenade Launcher',type:'ranged',dmg:22,cd:0.9,range:70,pspd:45,col:0x8a9a4a, splash:8, gfx:'grenade' },
+  gravity: { name:'Gravity Launcher',type:'ranged',dmg:40,cd:1.2,range:80,pspd:50,col:0x7744cc, splash:11, gfx:'orb' },
+  mortar:  { name:'Nebula Mortar',type:'ranged',dmg:30, cd:1.8, range:105,pspd:40,col:0xaa88ff, splash:14, salvo:1, lob:20, gfx:'mortar' },
+  // --- ported from PVP: energy / exotic ---
+  flame:   { name:'Flamethrower',type:'ranged', dmg:4,  cd:0.04,range:22, pspd:30, col:0xff7a2a, splash:2, gfx:'flame' },
+  plasma:  { name:'Plasma Carbine',type:'ranged',dmg:14,cd:0.18,range:78,pspd:80, col:0x55ff99, splash:3, gfx:'plasma' },
+  arc:     { name:'Arc Rifle',   type:'hitscan',dmg:22, cd:0.5, range:95, col:0xaaeeff, gfx:'tesla' },
+  solar:   { name:'Solar Lance', type:'hitscan',dmg:16, cd:0.25,range:115,col:0xffee44, gfx:'beam' },
+  freeze:  { name:'Freeze Gun',  type:'ranged', dmg:9,  cd:0.25,range:60, pspd:65, col:0x99ddff, gfx:'freeze' },
+  magnetar:{ name:'Magnetar Cannon',type:'ranged',dmg:45,cd:1.3,range:90,pspd:75,col:0xff77cc, splash:9, gfx:'magnet' },
+  voidh:   { name:'Void Harvester',type:'ranged',dmg:55,cd:1.0,range:85,pspd:70,col:0x9b30c0, splash:6, gfx:'void' },
+  // --- special weapon classes (own body + firing behavior) ---
+  shotgun: { name:'Shotgun',     type:'ranged', dmg:8,  cd:0.8, range:38, pspd:85, col:0xd0b070, salvo:7, spread:0.22, gfx:'shotgun' },
+  rpg:     { name:'RPG',         type:'ranged', dmg:55, cd:1.6, range:85, pspd:48, col:0x4a5a3a, splash:13, gfx:'rpg' },
+  napalm:  { name:'Napalm Barrage',type:'ranged',dmg:12,cd:1.4, range:70, pspd:46, col:0xff7a2a, splash:8, salvo:5, spread:0.16, gfx:'napalm' },
+  flak:    { name:'Flak Cannon', type:'ranged', dmg:10, cd:0.6, range:62, pspd:60, col:0xc0a040, splash:5, salvo:4, spread:0.1, gfx:'flak' },
+  acid:    { name:'Acid Spitter',type:'ranged', dmg:9,  cd:0.2, range:45, pspd:50, col:0x9aee3a, splash:3, gfx:'acid' },
+  harpoon: { name:'Harpoon Gun', type:'ranged', dmg:48, cd:1.3, range:95, pspd:110,col:0x8a8a92, pierce:true, gfx:'harpoon' },
+  // --- more ported from PVP ---
+  vector:  { name:'Vector SMG',  type:'ranged', dmg:5,  cd:0.06,range:55, pspd:95, col:0x8a94a0, spread:0.08, gfx:'smg' },
+  crossbow:{ name:'Crossbow',    type:'ranged', dmg:40, cd:1.0, range:100,pspd:120,col:0x6a5a3a, pierce:true, gfx:'crossbow' },
+  incend:  { name:'Inferno Shotgun',type:'ranged',dmg:9,cd:0.9, range:38, pspd:85, col:0xff7a3a, salvo:7, spread:0.22, splash:2, gfx:'shotgun' },
+  stormc:  { name:'Storm Cannon',type:'ranged', dmg:30, cd:1.2, range:90, pspd:70, col:0x88ccff, splash:9, gfx:'tesla' },
+  arctor:  { name:'Arc Torrent', type:'hitscan',dmg:20, cd:0.4, range:100,col:0xaaeeff, gfx:'beam' },
+  firework:{ name:'Firework Launcher',type:'ranged',dmg:16,cd:1.0,range:75,pspd:55,col:0xff5acf, splash:6, salvo:5, spread:0.16, gfx:'rockets' },
+  shockw:  { name:'Shockwave Cannon',type:'ranged',dmg:14,cd:1.0,range:60,pspd:60,col:0xc9d0dd, splash:12, gfx:'flak' },
+  glass:   { name:'Glassmaker',  type:'ranged', dmg:10, cd:0.5, range:60, pspd:62, col:0xbfeaff, salvo:6, spread:0.14, splash:2, gfx:'acid' },
+  seismic: { name:'Seismic Maul',type:'melee',  dmg:65, cd:1.1, range:9,  col:0x8a7a5a, splash:8, gfx:'hammer' },
+  // --- tracking / homing (track:true, or a number = turn rate rad/s) ---
+  swarm:   { name:'Swarm Launcher',type:'ranged',dmg:14,cd:0.8, range:95, pspd:58, col:0xff9a4a, splash:4, salvo:3, spread:0.25, track:true, gfx:'seeker' },
+  seeker:  { name:'Seeker Missiles',type:'ranged',dmg:26,cd:1.2,range:110,pspd:52,col:0xd06a4a, splash:8, salvo:1, track:1.8, gfx:'seeker' },
+  smartsmg:{ name:'Smart SMG',   type:'ranged', dmg:6,  cd:0.11,range:78, pspd:78, col:0x6adfa0, track:3.6, gfx:'smg' },
+  needle:  { name:'Pulse Needle',type:'ranged', dmg:7,  cd:0.5, range:85, pspd:88, col:0xc06aff, salvo:4, spread:0.12, track:2.8, gfx:'smg' },
+  // --- semi-tracking (homes briefly / weakly, then flies straight) ---
+  guided:  { name:'Guided Shells',type:'ranged',dmg:28, cd:1.0, range:100,pspd:65, col:0xffcf6a, splash:6, track:1.4, gfx:'cannon' },
+  skitter: { name:'Skitter Rockets',type:'ranged',dmg:12,cd:0.7,range:90, pspd:60, col:0xff9a4a, splash:4, salvo:3, spread:0.2, track:true, trackTime:0.45, gfx:'seeker' },
+  // --- upward / ballistic lob (arc over cover) ---
+  artillery:{name:'Artillery',   type:'ranged', dmg:42, cd:1.9, range:120,pspd:40, col:0x8a7a4a, splash:13, lob:26, gfx:'mortar' },
+  lobber:  { name:'Grenade Lobber',type:'ranged',dmg:18,cd:0.65,range:70, pspd:34, col:0x6a8a3a, splash:7, lob:16, gfx:'grenade' },
+  clusterbomb:{name:'Cluster Bombs',type:'ranged',dmg:10,cd:1.5,range:90,pspd:36,col:0xff6a4a, splash:6, salvo:4, spread:0.16, lob:20, gfx:'napalm' },
+  // --- deployable mines (proximity-triggered) ---
+  mine:    { name:'Mine Layer',  type:'ranged', dmg:48, cd:1.0, range:38, col:0xff5a5a, splash:8, mine:true, gfx:'minelayer' },
+  clustermine:{name:'Cluster Mines',type:'ranged',dmg:22,cd:1.5,range:38,col:0xffaa3a, splash:6, salvo:3, mine:true, gfx:'minelayer' },
+  // --- ported from PVP: melee ---
+  katana:  { name:'Katana',      type:'melee',  dmg:38, cd:0.35,range:7,  col:0xc8d0d8, gfx:'blade' },
+  lightsabre:{name:'Lightsabre', type:'melee',  dmg:52, cd:0.4, range:8,  col:0x55ffd0, glow:true, gfx:'blade' },
+  gravhammer:{name:'Gravity Hammer',type:'melee',dmg:72,cd:1.0, range:9,  col:0x9a6acc, splash:7, gfx:'hammer' },
+};
+const BACKPACKS = {
+  none:    { name:'None' },
+  jet:     { name:'Jetpack',    boost:1.5 },          // faster boost regen + dash
+  thrust:  { name:'Heavy Thrusters', boost:1.5, spd:0.12 }, // boost + a little base speed
+  ammo:    { name:'Ammo Feed',  firerate:0.7 },        // multiply weapon cd
+  overclock:{name:'Overclock Core', firerate:0.5 },    // big fire-rate boost
+  regen:   { name:'Repair Bay', regen:6 },             // hp/sec
+  nano:    { name:'Nano Repair', regen:13 },           // strong regen
+  shieldgen:{name:'Shield Field', dr:0.16 },           // passive damage resist
+  missiles:{ name:'Missile Rack', auto:{dmg:10,cd:1.6,range:75,pspd:50,splash:6} }, // passive homing
+  tesla:   { name:'Tesla Coil',   auto:{dmg:14,cd:1.1,range:45,pspd:160,splash:0,col:0xaaeeff} }, // short-range zap
+};
+
+// ---------- DEFAULT LOADOUT ----------
+const loadout = {
+  torso:'medium', armor:'plate', legs:'biped',
+  armL:'chainsaw', armR:'cannon', back:'jet',
+};
+
+// ---------- GARAGE UI ----------
+const SLOTS = [
+  { key:'torso', label:'Torso',     cat:TORSOS },
+  { key:'armor', label:'Armor',     cat:ARMORS },
+  { key:'armL',  label:'Left Arm',  cat:WEAPONS },
+  { key:'armR',  label:'Right Arm', cat:WEAPONS },
+  { key:'back',  label:'Backpack',  cat:BACKPACKS },
+  { key:'legs',  label:'Legs',      cat:LEGS },
+];
+const picker = document.getElementById('picker');
+function buildPicker(){
+  picker.innerHTML='';
+  SLOTS.forEach(slot=>{
+    const div=document.createElement('div'); div.className='slot';
+    div.innerHTML=`<h3>${slot.label}</h3>`;
+    const opts=document.createElement('div'); opts.className='opts';
+    Object.keys(slot.cat).forEach(id=>{
+      const o=document.createElement('div');
+      o.className='opt'+(loadout[slot.key]===id?' sel':'');
+      o.textContent=slot.cat[id].name;
+      o.onclick=()=>{ loadout[slot.key]=id; buildPicker(); updateStats(); rebuildPreview(); };
+      opts.appendChild(o);
+    });
+    div.appendChild(opts); picker.appendChild(div);
+  });
+}
+function computeStats(){
+  const t=TORSOS[loadout.torso], a=ARMORS[loadout.armor], l=LEGS[loadout.legs], b=BACKPACKS[loadout.back];
+  const hp = t.hp + (l.hp||0);
+  const dr = Math.min(0.75, a.dr + (b.dr||0) + (loadout.armL==='shield'?WEAPONS.shield.dr*0.5:0) + (loadout.armR==='shield'?WEAPONS.shield.dr*0.5:0));
+  const spd = Math.max(0.3, (t.spd + a.spd + (b.spd||0)) * l.spd);
+  // rough offense estimate = sum of dps
+  const dps=(w)=>{const W=WEAPONS[w]; if(!W||!W.dmg)return 0; return (W.dmg*(W.salvo||1))/W.cd;};
+  let off = dps(loadout.armL)+dps(loadout.armR);
+  if(b.auto) off += b.auto.dmg/b.auto.cd;
+  return { hp, dr, spd, off };
+}
+function updateStats(){
+  const s=computeStats();
+  const rows=[
+    ['Integrity', Math.min(1,s.hp/200), Math.round(s.hp)],
+    ['Damage Res', s.dr/0.75, Math.round(s.dr*100)+'%'],
+    ['Speed', Math.min(1,s.spd/1.7), s.spd.toFixed(2)],
+    ['Firepower', Math.min(1,s.off/120), Math.round(s.off)],
+  ];
+  document.getElementById('statBars').innerHTML = rows.map(r=>`
+    <div class="stat"><div class="lab"><span>${r[0]}</span><span>${r[2]}</span></div>
+    <div class="bar"><i style="width:${Math.round(r[1]*100)}%"></i></div></div>`).join('');
+}
+
+// =====================================================================
+//  THREE.JS SETUP
+// =====================================================================
+let renderer, scene, camera, clock;
+let previewScene, previewCam, previewMech, previewRenderer;
+const ARENA = 120;
+
+function initThree(){
+  renderer = new THREE.WebGLRenderer({ canvas:document.getElementById('c'), antialias:true });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+  renderer.shadowMap.enabled = true;
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0e14);
+  scene.fog = new THREE.Fog(0x0a0e14, 80, 200);
+  camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 600);
+  clock = new THREE.Clock();
+  addEventListener('resize', ()=>{
+    renderer.setSize(innerWidth, innerHeight);
+    camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+    if(previewCam){ previewCam.aspect = previewEl().clientWidth/previewEl().clientHeight; previewCam.updateProjectionMatrix(); }
+  });
+}
+function previewEl(){ return document.getElementById('preview'); }
+
+// ---------- LIGHTING (shared helper) ----------
+function addLights(scn){
+  scn.add(new THREE.HemisphereLight(0x9fc0ff, 0x2a3340, 1.05));
+  const sun=new THREE.DirectionalLight(0xffffff, 1.25);
+  sun.position.set(40,80,30); sun.castShadow=true;
+  sun.shadow.mapSize.set(1024,1024);
+  sun.shadow.camera.left=-90; sun.shadow.camera.right=90;
+  sun.shadow.camera.top=90; sun.shadow.camera.bottom=-90; sun.shadow.camera.far=240;
+  scn.add(sun);
+}
+
+// =====================================================================
+//  MECH BUILDER — assembles a THREE.Group from a loadout
+//  Returns { group, parts:{...refs for animation}, stats }
+// =====================================================================
+function mat(col, opts={}){ return new THREE.MeshStandardMaterial({ color:col, roughness:opts.r??0.6, metalness:opts.m??0.45, ...opts }); }
+function box(w,h,d,col,opt){ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat(col,opt)); m.castShadow=true; m.receiveShadow=true; return m; }
+function cyl(rt,rb,h,col,seg=12){ const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg), mat(col)); m.castShadow=true; return m; }
+
+function buildWeaponMesh(wid, side){
+  const W=WEAPONS[wid]; const g=new THREE.Group();
+  if(!W || W.type==='none'){ // bare arm
+    const arm=box(0.5,0.5,0.5,0x44505e); g.add(arm); return g;
+  }
+  const gfx = W.gfx || wid; // silhouette hint (defaults to the weapon id)
+  if(W.type==='shield'){
+    const s=box(0.35,2.6,2.0,W.col,{m:0.6,r:0.4}); s.position.z=0.6; g.add(s);
+    const boss=cyl(0.4,0.4,0.4,0x6a8ac0); boss.rotation.x=Math.PI/2; boss.position.z=0.85; g.add(boss);
+    return g;
+  }
+  if(W.type==='melee'){
+    if(gfx==='chainsaw'){
+      const bar=box(0.5,0.5,3.2,0x33393f); bar.position.z=1.6; g.add(bar);
+      const blade=box(0.9,0.12,3.4,W.col,{m:0.8,r:0.3}); blade.position.z=1.7; g.add(blade);
+      const teeth=new THREE.Group();
+      for(let i=0;i<10;i++){ const t=box(0.16,0.16,0.16,0xf0f4f8); t.position.set(0.5,0,i*0.32-1.4); teeth.add(t); }
+      blade.userData.teeth=teeth; g.add(teeth); g.userData.spin=teeth;
+    } else if(gfx==='blade'){ // katana / lightsabre
+      const hilt=cyl(0.14,0.14,0.7,0x33393f); hilt.rotation.x=Math.PI/2; hilt.position.z=0.35; g.add(hilt);
+      const guard=box(0.5,0.5,0.12,0x6a6a72); guard.position.z=0.72; g.add(guard);
+      const bladeOpt=W.glow?{m:0.2,r:0.2,emissive:W.col,emissiveIntensity:1.1}:{m:0.85,r:0.25};
+      const blade=box(0.12,0.34,3.0,W.col,bladeOpt); blade.position.z=2.3; g.add(blade);
+    } else { // hammer
+      const handle=cyl(0.16,0.16,3,0x5a4a30); handle.rotation.x=Math.PI/2; handle.position.z=1.5; g.add(handle);
+      const head=box(1.2,1.2,1.0,W.col,{m:0.6}); head.position.z=3; g.add(head);
+    }
+    return g;
+  }
+  // ranged / hitscan -> detailed, distinct models (all aim +z)
+  const em=(c,i=0.9)=>({emissive:c,emissiveIntensity:i,m:0.3,r:0.3});
+  const zbarrel=(r1,r2,h,col,z,seg=12)=>{ const b=cyl(r1,r2,h,col,seg); b.rotation.x=Math.PI/2; b.position.z=z; return b; };
+  const ztor=(rad,tube,col,z,opt={})=>{ const t=new THREE.Mesh(new THREE.TorusGeometry(rad,tube,8,16), mat(col,opt)); t.position.z=z; t.castShadow=true; return t; };
+  const housing=box(0.85,0.85,1.2,0x3a424e,{m:0.55}); housing.position.z=0.4; g.add(housing);
+
+  if(gfx==='rockets' || gfx==='missiles'){
+    const block=box(1.0,1.0,1.5,0x4a3a2a,{m:0.4}); block.position.z=0.9; g.add(block);
+    for(let i=0;i<4;i++){ const tube=zbarrel(0.18,0.18,1.5,0x2a2a30,1.1); tube.position.x=(i%2-0.5)*0.46; tube.position.y=(Math.floor(i/2)-0.5)*0.46; g.add(tube);
+      const tip=zbarrel(0.1,0.1,0.2,W.col,1.85); tip.position.x=tube.position.x; tip.position.y=tube.position.y; tip.material.emissive=new THREE.Color(W.col); tip.material.emissiveIntensity=0.6; g.add(tip); }
+
+  } else if(gfx==='grenade'){
+    const drum=cyl(0.55,0.55,0.45,0x3a4250); drum.position.set(0,-0.1,0.7); g.add(drum); // revolver cylinder
+    for(let i=0;i<6;i++){ const c=zbarrel(0.1,0.1,0.45,0x22262c,0.7); c.position.x=Math.cos(i/6*6.28)*0.32; c.position.y=-0.1+Math.sin(i/6*6.28)*0.32; g.add(c); }
+    const tube=zbarrel(0.34,0.38,1.5,W.col,1.5); g.add(tube);
+    const mouth=zbarrel(0.4,0.34,0.3,0x22262c,2.3); g.add(mouth);
+
+  } else if(gfx==='mg'){
+    const shroud=zbarrel(0.34,0.34,1.4,0x2c333d,1.4); g.add(shroud); // cooling shroud
+    for(let i=0;i<4;i++) g.add(ztor(0.36,0.05,0x4a525e,0.9+i*0.4)); // cooling ribs along barrel
+    const ammo=box(0.6,0.5,0.8,0x4a4030,{m:0.4}); ammo.position.set(0.55,0.4,0.2); g.add(ammo);
+    const bA=zbarrel(0.12,0.12,2.0,W.col,1.5); bA.position.x=0.16; g.add(bA);
+    const b2=zbarrel(0.12,0.12,2.0,W.col,1.5); b2.position.x=-0.16; g.add(b2);
+
+  } else if(gfx==='minigun'){
+    const drum=zbarrel(0.46,0.5,0.9,0x2c333d,0.9); g.add(drum);
+    const spin=new THREE.Group(); // rotating barrel cluster
+    for(let i=0;i<6;i++){ const b=zbarrel(0.1,0.1,2.2,W.col,1.5); b.position.x=Math.cos(i/6*6.28)*0.24; b.position.y=Math.sin(i/6*6.28)*0.24; spin.add(b); }
+    g.add(spin); g.userData.spin=spin;
+    const plate=cyl(0.3,0.3,0.1,0x44505e); plate.rotation.x=Math.PI/2; plate.position.z=2.6; g.add(plate);
+
+  } else if(gfx==='rail' || gfx==='sniper'){
+    const long=gfx==='sniper';
+    const len=long?3.6:2.8, rr=long?0.16:0.1;
+    const r1=zbarrel(rr,rr,len,0xcdd6e4,len/2+0.4); r1.position.x= long?0:0.18; g.add(r1);
+    if(!long){ const r2=zbarrel(rr,rr,len,0xcdd6e4,len/2+0.4); r2.position.x=-0.18; g.add(r2); }
+    for(let i=0;i<4;i++){ const ring=ztor(long?0.26:0.3,0.06,W.col,0.7+i*0.6,em(W.col,1.1)); g.add(ring); } // coils
+    const acc=new THREE.Mesh(new THREE.SphereGeometry(0.26,10,10), mat(W.col,em(W.col,1.0))); acc.position.z=0.3; g.add(acc);
+    if(long){ const scope=zbarrel(0.12,0.12,1.0,0x22262c,0.9); scope.position.y=0.42; g.add(scope);
+      const brake=box(0.5,0.5,0.5,0x22262c); brake.position.z=len+0.4; g.add(brake); }
+
+  } else if(gfx==='cannon'){
+    const sleeve=zbarrel(0.4,0.4,1.0,0x33393f,0.9); g.add(sleeve);
+    const barrel=zbarrel(0.28,0.32,2.0,W.col,1.5); g.add(barrel);
+    const brake=zbarrel(0.42,0.42,0.45,0x22262c,2.4); g.add(brake); // muzzle brake
+    const vL=box(0.5,0.14,0.3,0x22262c); vL.position.set(0,0.28,2.35); g.add(vL);
+    const vR=vL.clone(); vR.position.y=-0.28; g.add(vR);
+
+  } else if(gfx==='flame'){
+    const tank=zbarrel(0.34,0.34,1.0,0xc04030,0.7,10); tank.position.y=0.2; g.add(tank);
+    const pipe=zbarrel(0.12,0.12,1.4,0x55606e,1.2); pipe.position.y=-0.15; g.add(pipe);
+    const nozzle=zbarrel(0.18,0.5,0.8,0x33393f,2.0); g.add(nozzle); // flaring cone
+    const pilot=new THREE.Mesh(new THREE.SphereGeometry(0.14,8,8), mat(0xff9a3a,em(0xff7a2a,1.4))); pilot.position.set(0.3,0.3,2.0); g.add(pilot);
+
+  } else if(gfx==='plasma'){
+    const barrel=zbarrel(0.16,0.16,1.8,0x33393f,1.3); g.add(barrel);
+    for(let i=0;i<3;i++) g.add(ztor(0.26,0.07,W.col,0.7+i*0.55,em(W.col,1.2)));
+    const bulb=new THREE.Mesh(new THREE.SphereGeometry(0.3,12,12), mat(W.col,em(W.col,1.1))); bulb.position.z=2.3; g.add(bulb);
+    const cap=box(0.22,0.22,0.7,W.col,em(W.col,0.6)); cap.position.set(0.3,0,0.6); g.add(cap);
+
+  } else if(gfx==='tesla'){
+    const coil=zbarrel(0.3,0.3,0.8,0x2c333d,0.7); g.add(coil);
+    for(let i=0;i<3;i++) g.add(ztor(0.3,0.06,W.col,0.5+i*0.35,em(W.col,1.0)));
+    for(const sx of [-1,1]){ const prong=zbarrel(0.08,0.08,1.6,0xcdd6e4,1.6); prong.position.x=sx*0.26; g.add(prong);
+      const ball=new THREE.Mesh(new THREE.SphereGeometry(0.16,8,8), mat(W.col,em(W.col,1.4))); ball.position.set(sx*0.26,0,2.4); g.add(ball); }
+
+  } else if(gfx==='beam'){
+    const body=zbarrel(0.32,0.36,1.6,0x44505e,1.1); g.add(body);
+    for(let i=0;i<4;i++){ const fin=box(0.7,0.08,0.5,0x33393f); fin.position.set(0,0,0.6+i*0.35); fin.rotation.z=i*0.4; g.add(fin); } // heatsink fins
+    const lens=cyl(0.5,0.5,0.14,W.col,16); lens.rotation.x=Math.PI/2; lens.position.z=2.1; lens.material.emissive=new THREE.Color(W.col); lens.material.emissiveIntensity=1.2; g.add(lens);
+    g.add(ztor(0.5,0.06,0x22262c,2.18));
+
+  } else if(gfx==='freeze'){
+    const tank=zbarrel(0.32,0.32,1.0,0x4a6a8a,0.7,10); g.add(tank);
+    const cone=new THREE.Mesh(new THREE.ConeGeometry(0.3,1.2,6), mat(0x33393f)); cone.rotation.x=Math.PI/2; cone.position.z=1.9; g.add(cone);
+    for(let i=0;i<3;i++){ const cry=new THREE.Mesh(new THREE.ConeGeometry(0.1,0.7,5), mat(W.col,em(W.col,0.9))); cry.rotation.x=Math.PI/2; cry.position.set(Math.cos(i/3*6.28)*0.22,Math.sin(i/3*6.28)*0.22,2.4); g.add(cry); }
+
+  } else if(gfx==='orb'){
+    for(const sx of [-1,1]){ const prong=zbarrel(0.1,0.1,1.7,0x44505e,1.2); prong.position.x=sx*0.36; prong.rotation.y=sx*-0.12; g.add(prong); }
+    const orb=new THREE.Mesh(new THREE.SphereGeometry(0.42,14,14), mat(W.col,em(W.col,1.0))); orb.position.z=1.9; g.add(orb);
+    const oring=ztor(0.5,0.05,W.col,1.9,em(W.col,0.8)); oring.rotation.y=Math.PI/2; g.add(oring);
+
+  } else if(gfx==='magnet'){
+    const base=box(0.7,0.9,0.7,0x3a424e,{m:0.5}); base.position.z=0.6; g.add(base);
+    for(const sx of [-1,1]){ const prong=box(0.24,0.55,1.6,0x6a6a72,{m:0.7}); prong.position.set(sx*0.34,0,1.4); g.add(prong);
+      const tip=box(0.26,0.57,0.3,sx<0?0xff5a6a:0x5a9aff,em(sx<0?0xff5a6a:0x5a9aff,1.2)); tip.position.set(sx*0.34,0,2.1); g.add(tip); }
+    const core=new THREE.Mesh(new THREE.SphereGeometry(0.2,10,10), mat(W.col,em(W.col,1.0))); core.position.z=1.7; g.add(core);
+
+  } else if(gfx==='mortar'){
+    const plate=box(1.0,0.2,1.0,0x33393f); plate.position.set(0,-0.5,0.3); g.add(plate);
+    const tube=cyl(0.32,0.36,2.6,W.col); tube.rotation.x=Math.PI*0.32; tube.position.set(0,0.5,1.0); g.add(tube); // angled up
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(0.34,0.06,8,14), mat(0x22262c)); ring.rotation.x=Math.PI*0.32; ring.position.set(0,1.15,1.75); g.add(ring);
+
+  } else if(gfx==='void'){
+    const shell=new THREE.Mesh(new THREE.IcosahedronGeometry(0.5,0), mat(0x1a0a22,{m:0.7,r:0.4})); shell.position.z=1.3; g.add(shell);
+    const orb=new THREE.Mesh(new THREE.SphereGeometry(0.3,12,12), mat(W.col,em(W.col,1.2))); orb.position.z=1.9; g.add(orb);
+    const vring=ztor(0.55,0.05,W.col,1.6,em(W.col,0.7)); vring.rotation.x=0.5; g.add(vring);
+    for(let i=0;i<4;i++){ const spike=new THREE.Mesh(new THREE.ConeGeometry(0.08,0.6,4), mat(0x2a0a3a)); spike.position.set(Math.cos(i/4*6.28)*0.5,Math.sin(i/4*6.28)*0.5,1.7); spike.rotation.x=Math.PI/2; g.add(spike); }
+
+  } else if(gfx==='laser'){
+    const emit=zbarrel(0.22,0.22,1.8,0x44505e,1.3,8); g.add(emit);
+    const rib=box(0.5,0.12,1.0,0x33393f); rib.position.set(0,0.2,1.0); g.add(rib);
+    const lens=cyl(0.28,0.28,0.12,W.col); lens.rotation.x=Math.PI/2; lens.position.z=2.2; lens.material.emissive=new THREE.Color(W.col); lens.material.emissiveIntensity=1.2; g.add(lens);
+
+  } else if(gfx==='shotgun'){
+    const stock=box(0.5,0.5,1.2,0x5a4630,{m:0.3,r:0.7}); stock.position.z=-0.1; g.add(stock);
+    for(const sy of [0.13,-0.13]){ const bbl=zbarrel(0.16,0.18,1.8,W.col,1.4); bbl.position.y=sy; g.add(bbl);
+      const mouth=zbarrel(0.21,0.16,0.22,0x22262c,2.3); mouth.position.y=sy; g.add(mouth); }
+    const pump=box(0.5,0.32,0.6,0x33393f); pump.position.set(0,-0.3,1.1); g.add(pump);
+
+  } else if(gfx==='rpg'){
+    const tube=zbarrel(0.3,0.3,2.6,0x4a5240,1.3); g.add(tube);
+    const rear=zbarrel(0.36,0.2,0.5,0x33393f,-0.1); g.add(rear);                 // rear venturi cone
+    const head=new THREE.Mesh(new THREE.ConeGeometry(0.27,0.75,10), mat(0x8a3a2a,{m:0.4})); head.rotation.x=Math.PI/2; head.position.z=2.75; g.add(head); // warhead
+    for(const sx of [-1,1]){ const fin=box(0.05,0.4,0.3,0x33393f); fin.position.set(sx*0.25,0,2.45); g.add(fin); }
+    const sight=box(0.1,0.32,0.1,0x22262c); sight.position.set(0,0.36,0.8); g.add(sight);
+
+  } else if(gfx==='napalm'){
+    const rack=box(1.15,1.0,1.2,0x3a2a1a,{m:0.3,r:0.6}); rack.position.z=0.9; g.add(rack);
+    for(let i=0;i<6;i++){ const tx=(i%3-1)*0.34, ty=(Math.floor(i/3)-0.5)*0.4;
+      const tube=cyl(0.13,0.13,1.0,0x22180e); tube.rotation.x=Math.PI*0.42; tube.position.set(tx,ty+0.2,1.5); g.add(tube);
+      const glow=new THREE.Mesh(new THREE.SphereGeometry(0.1,8,8), mat(W.col,em(W.col,1.3))); glow.position.set(tx,ty+0.42,1.95); g.add(glow); }
+
+  } else if(gfx==='flak'){
+    const breech=box(0.95,0.95,1.0,0x44505e,{m:0.5}); breech.position.z=0.7; g.add(breech);
+    const drum=cyl(0.45,0.45,0.4,0x4a4030); drum.position.set(0.55,-0.2,0.5); g.add(drum); // ammo drum
+    const barrel=zbarrel(0.3,0.42,1.6,W.col,1.6); g.add(barrel);                  // flaring muzzle
+    for(let i=0;i<4;i++){ const prong=box(0.1,0.1,0.5,0x22262c); prong.position.set(Math.cos(i/4*6.28+0.4)*0.36,Math.sin(i/4*6.28+0.4)*0.36,2.4); g.add(prong); }
+
+  } else if(gfx==='acid'){
+    const tank=new THREE.Mesh(new THREE.SphereGeometry(0.45,12,12), mat(0x3a5a1a,{m:0.2,r:0.5})); tank.position.set(0,0.12,0.4); g.add(tank);
+    const pipe=zbarrel(0.12,0.14,1.6,0x4a5240,1.4); pipe.position.y=-0.12; g.add(pipe);
+    const nozzle=new THREE.Mesh(new THREE.ConeGeometry(0.22,0.5,8), mat(0x33393f)); nozzle.rotation.x=Math.PI/2; nozzle.position.set(0,-0.12,2.2); g.add(nozzle);
+    const drip=new THREE.Mesh(new THREE.SphereGeometry(0.15,8,8), mat(W.col,em(W.col,0.9))); drip.position.set(0,-0.22,2.35); g.add(drip);
+
+  } else if(gfx==='harpoon'){
+    const body=box(0.5,0.5,1.4,0x44505e,{m:0.5}); body.position.z=0.6; g.add(body);
+    for(const sx of [-1,1]){ const limb=box(0.9,0.13,0.16,0x33393f); limb.position.set(sx*0.42,0,0.9); limb.rotation.z=sx*0.32; g.add(limb); } // crossbow limbs
+    const shaft=zbarrel(0.07,0.07,2.6,W.col,1.6); g.add(shaft);                   // loaded spear
+    const tip=new THREE.Mesh(new THREE.ConeGeometry(0.16,0.5,6), mat(0xcdd6e4,{m:0.8})); tip.rotation.x=Math.PI/2; tip.position.z=3.0; g.add(tip);
+    for(const sx of [-1,1]){ const barb=box(0.04,0.04,0.34,0xcdd6e4); barb.position.set(sx*0.12,0,2.7); barb.rotation.y=sx*0.5; g.add(barb); }
+
+  } else if(gfx==='minelayer'){
+    const hopper=box(0.95,1.0,1.0,0x4a4a52,{m:0.4}); hopper.position.z=0.7; g.add(hopper);
+    const chute=box(0.6,0.4,0.7,0x2a2e34); chute.position.set(0,-0.4,1.3); g.add(chute);    // drop chute (downward)
+    const puck=cyl(0.36,0.42,0.2,0x33393f); puck.position.set(0,-0.62,1.4); g.add(puck);     // loaded mine
+    const led=new THREE.Mesh(new THREE.SphereGeometry(0.1,8,8), mat(W.col,em(W.col,1.2))); led.position.set(0,-0.5,1.4); g.add(led);
+    const handle=zbarrel(0.07,0.07,0.8,0x22262c,0.7); handle.position.y=0.55; g.add(handle);
+
+  } else if(gfx==='seeker'){
+    const box1=box(1.0,0.9,1.4,0x4a504a,{m:0.4}); box1.position.z=0.9; g.add(box1);                 // launcher box
+    for(let i=0;i<4;i++){ const tx=(i%2-0.5)*0.42, ty=(Math.floor(i/2)-0.5)*0.42;
+      const cell=zbarrel(0.17,0.17,1.0,0x22262c,1.2); cell.position.set(tx,ty,0); g.add(cell);
+      const head=new THREE.Mesh(new THREE.ConeGeometry(0.14,0.4,8), mat(W.col,em(W.col,0.6))); head.rotation.x=Math.PI/2; head.position.set(tx,ty,1.95); g.add(head); } // missile noses
+    const dish=cyl(0.28,0.05,0.1,0x2a3a4a); dish.position.set(0,0.62,0.5); dish.rotation.x=-0.5; g.add(dish);  // seeker radar
+    const dot=new THREE.Mesh(new THREE.SphereGeometry(0.07,8,8), mat(0x66ff99,em(0x44ff88,1.4))); dot.position.set(0,0.66,0.56); g.add(dot);
+
+  } else if(gfx==='smg'){
+    const body=box(0.55,0.6,1.3,0x33393f,{m:0.5}); body.position.z=0.7; g.add(body);
+    const mag=box(0.3,0.9,0.4,0x2a2e34); mag.position.set(0,-0.65,0.6); g.add(mag);        // curved-ish mag
+    const barrel=zbarrel(0.12,0.13,1.2,W.col,1.7); g.add(barrel);
+    const fore=box(0.32,0.32,0.7,0x44505e); fore.position.set(0,-0.05,1.5); g.add(fore);
+
+  } else if(gfx==='crossbow'){
+    const stock=box(0.4,0.4,1.6,0x4a3a26,{m:0.3,r:0.7}); stock.position.z=0.5; g.add(stock);
+    const rail=box(0.18,0.18,2.0,0x33393f); rail.position.z=1.4; g.add(rail);
+    for(const sx of [-1,1]){ const limb=box(1.4,0.1,0.14,0x5a4a30,{m:0.3}); limb.position.set(sx*0.7,0,1.6); limb.rotation.z=sx*0.18; g.add(limb); } // bow limbs
+    const bolt=zbarrel(0.06,0.06,2.2,W.col,1.7); g.add(bolt);                                // loaded bolt
+    const tip=new THREE.Mesh(new THREE.ConeGeometry(0.14,0.4,5), mat(0xcdd6e4,{m:0.8})); tip.rotation.x=Math.PI/2; tip.position.z=2.9; g.add(tip);
+
+  } else { // fallback single barrel
+    const barrel=zbarrel(0.28,0.32,2.4,W.col,1.5); g.add(barrel);
+  }
+  g.userData.muzzleZ = 2.4;
+  return g;
+}
+
+function buildMech(lo, teamColor){
+  const T=TORSOS[lo.torso], A=ARMORS[lo.armor], L=LEGS[lo.legs], B=BACKPACKS[lo.back];
+  const group=new THREE.Group();
+  const parts={ legGroups:[], wheels:[], leanRoot:new THREE.Group() };
+  group.add(parts.leanRoot);
+
+  const sz=T.size;
+  const torsoCol = teamColor!=null ? teamColor : T.col;
+
+  // ----- LEGS / BASE -----
+  const baseY = (L.kind==='wheel'||L.kind==='track') ? 1.3 : (L.kind==='hover'?2.1:2.4);
+  if(L.kind==='legs' || L.kind==='spider'){
+    const nLegs = L.kind==='spider'?4:2;
+    for(let i=0;i<nLegs;i++){
+      const lg=new THREE.Group();
+      const side = (i%2?1:-1);
+      const fwd = L.kind==='spider' ? (i<2?0.6:-0.6) : 0;
+      lg.position.set(side*0.8*sz, 0, fwd);
+      const thigh=box(0.5,1.4,0.5,L.col); thigh.position.y=1.6; lg.add(thigh);
+      const shin=box(0.42,1.5,0.42,A.col); shin.position.y=0.55; lg.add(shin);
+      const foot=box(0.7,0.3,1.2,0x33393f); foot.position.set(0,-0.15,0.25); lg.add(foot);
+      parts.legGroups.push(lg); parts.leanRoot.add(lg);
+    }
+  } else if(L.kind==='wheel'){
+    const base=box(2.6*sz,0.7,3.4,L.col); base.position.y=1.3; parts.leanRoot.add(base);
+    for(let i=0;i<4;i++){
+      const w=cyl(0.7,0.7,0.5,0x1a1d22,16); w.rotation.z=Math.PI/2;
+      w.position.set((i%2?1:-1)*1.4*sz,0.7,(i<2?1.1:-1.1)); parts.leanRoot.add(w); parts.wheels.push(w);
+    }
+  } else if(L.kind==='track'){
+    for(let s=0;s<2;s++){
+      const tr=box(0.9,1.1,3.8,L.col); tr.position.set((s?1:-1)*1.3*sz,1.0,0); parts.leanRoot.add(tr);
+      for(let i=0;i<4;i++){ const rl=cyl(0.45,0.45,0.5,0x1a1d22,12); rl.rotation.z=Math.PI/2; rl.position.set((s?1:-1)*1.3*sz,0.6,i*1-1.5); parts.leanRoot.add(rl); parts.wheels.push(rl); }
+    }
+  } else { // hover — floating chassis pod with glowing thruster pads
+    const pod=box(2.4*sz,0.7,3.0,L.col,{m:0.5}); pod.position.y=1.7; parts.leanRoot.add(pod);
+    parts.hover=true; parts.hoverPads=[];
+    for(let i=0;i<4;i++){
+      const pad=cyl(0.45,0.3,0.3,0x66ccff,10); pad.position.set((i%2?1:-1)*0.9*sz,1.25,(i<2?1:-1)*1.0);
+      pad.material.emissive=new THREE.Color(0x4aa0ff); pad.material.emissiveIntensity=0.9;
+      parts.leanRoot.add(pad); parts.hoverPads.push(pad);
+    }
+  }
+
+  // ----- TORSO (rides on hips) -----
+  const torso=new THREE.Group(); torso.position.y=baseY+1.4*sz; parts.leanRoot.add(torso); parts.torso=torso;
+  const chest=box(2.4*sz,2.0*sz,1.6*sz,torsoCol,{m:0.5,emissive:torsoCol,emissiveIntensity:0.18}); torso.add(chest);
+  parts.teamCol=torsoCol;
+  // armor plates
+  if(lo.armor!=='none'){
+    const plL=box(0.3,2.0*sz,1.7*sz,A.col); plL.position.x=1.25*sz; torso.add(plL);
+    const plR=plL.clone(); plR.position.x=-1.25*sz; torso.add(plR);
+    const collar=box(2.5*sz,0.4,1.7*sz,A.col); collar.position.y=1.1*sz; torso.add(collar);
+  }
+  // cockpit / head
+  const head=box(1.0*sz,0.8*sz,1.0*sz,0x222830); head.position.set(0,1.3*sz,0.2); torso.add(head);
+  const eye=box(0.7*sz,0.18,0.12,0x9af0ff,{emissive:0x2a90b0,emissiveIntensity:1}); eye.position.set(0,1.35*sz,0.75); torso.add(eye);
+
+  // ----- ARMS -----
+  function makeArm(side, wid){
+    const shoulder=new THREE.Group();
+    shoulder.position.set(side*(1.4*sz),0.5*sz,0);
+    const upper=box(0.6,1.0,0.6,L.col); upper.position.y=-0.4; shoulder.add(upper);
+    const wm=buildWeaponMesh(wid, side); wm.position.set(0,-0.9,0.2); shoulder.add(wm);
+    shoulder.userData.weaponMesh=wm;
+    torso.add(shoulder); return shoulder;
+  }
+  parts.armR = makeArm(-1, lo.armR);
+  parts.armL = makeArm( 1, lo.armL);
+
+  // ----- BACKPACK -----
+  if(lo.back!=='none'){
+    const bp=new THREE.Group(); bp.position.set(0,0.4*sz,-1.1*sz);
+    if(lo.back==='jet' || lo.back==='thrust'){
+      const big=lo.back==='thrust'?1.25:1;
+      const j1=cyl(0.3*big,0.4*big,1.0*big,0x40484f); j1.position.set(0.5,-0.2,0); bp.add(j1);
+      const j2=j1.clone(); j2.position.x=-0.5; bp.add(j2);
+      const f1=cyl(0.05,0.3*big,0.6*big,0xff8a3a,8); f1.position.set(0.5,-0.85,0); bp.add(f1);
+      const f2=f1.clone(); f2.position.x=-0.5; bp.add(f2);
+      parts.jetFlames=[f1,f2]; f1.visible=f2.visible=false;
+    } else if(lo.back==='missiles'){
+      const rack=box(1.8*sz,1.0,0.8,0x4a3a2a); bp.add(rack);
+      for(let i=0;i<6;i++){ const m=cyl(0.1,0.1,0.7,0xb47a4a); m.rotation.x=Math.PI/2; m.position.set((i%3-1)*0.5,(Math.floor(i/3)-0.5)*0.5,0.5); bp.add(m); }
+    } else if(lo.back==='tesla'){
+      const c=box(1.0,1.0,0.7,0x2a3a4a); bp.add(c);
+      const rod=cyl(0.07,0.07,1.4,0x99bbcc); rod.position.y=1.0; bp.add(rod);
+      const orb=new THREE.Mesh(new THREE.SphereGeometry(0.3,10,10), mat(0xaaeeff,{emissive:0x66ccff,emissiveIntensity:1})); orb.position.y=1.7; bp.add(orb);
+    } else if(lo.back==='regen' || lo.back==='nano'){
+      const glow=lo.back==='nano'?0x33cc66:0x166a2a;
+      const c=box(1.4,1.2,0.7,0x2a5a3a,{emissive:glow,emissiveIntensity:lo.back==='nano'?0.7:0.4}); bp.add(c);
+      const cross=box(0.18,0.7,0.05,0xeaffea); cross.position.z=0.4; bp.add(cross);
+      const cross2=box(0.7,0.18,0.05,0xeaffea); cross2.position.z=0.4; bp.add(cross2);
+    } else if(lo.back==='shieldgen'){
+      const c=box(1.4,1.3,0.7,0x24486a,{emissive:0x2a6aaa,emissiveIntensity:0.6}); bp.add(c);
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(0.5,0.08,8,16), mat(0x66aaff,{emissive:0x4488ff,emissiveIntensity:0.9})); ring.position.z=0.45; bp.add(ring);
+    } else if(lo.back==='overclock'){
+      const c=box(1.5,1.2,0.7,0x6a4a24,{emissive:0xff8a2a,emissiveIntensity:0.5}); bp.add(c);
+      for(let i=0;i<3;i++){ const v=box(0.9,0.12,0.4,0xffb05a,{emissive:0xff8a2a,emissiveIntensity:0.7}); v.position.set(0,i*0.4-0.4,0.42); bp.add(v); }
+    } else { // ammo / default
+      const c=box(1.6,1.2,0.7,0x55606e); bp.add(c);
+      const belt=box(0.3,0.3,1.0,0xb4a05a); belt.position.set(0.7,-0.3,0.6); bp.add(belt);
+    }
+    torso.add(bp);
+  }
+
+  group.scale.setScalar(1.0);
+  return { group, parts, T, A, L, B, sz, baseY };
+}
+
+// =====================================================================
+//  GARAGE PREVIEW (rotating mech)
+// =====================================================================
+function initPreview(){
+  previewScene=new THREE.Scene();
+  addLights(previewScene);
+  const grid=new THREE.GridHelper(40,20,0x2a4a6a,0x18283a); previewScene.add(grid);
+  previewCam=new THREE.PerspectiveCamera(45, previewEl().clientWidth/previewEl().clientHeight, 0.1, 200);
+  previewCam.position.set(9,7,12); previewCam.lookAt(0,3,0);
+  rebuildPreview();
+}
+function rebuildPreview(){
+  if(previewMech) previewScene.remove(previewMech.group);
+  previewMech=buildMech(loadout, null);
+  previewScene.add(previewMech.group);
+}
+
+// =====================================================================
+//  GAME STATE
+// =====================================================================
+let state='garage';
+const mechs=[]; // {build, hp, maxhp, pos, vel, heading, team, ai, cds, ...}
+const projectiles=[];
+const mines=[];   // deployed proximity mines {mesh, pos, team, dmg, radius, life, armT, owner}
+const effects=[]; // transient meshes {mesh, life, vy?}
+let player=null;
+const keys={};
+let mouse={x:0,y:0,down:0}; // down bit0=L bit1=R
+let aimYaw=0; // world yaw the player aims toward (camera-driven)
+// touch input (mobile): twin sticks + fire/boost buttons
+const touch={ moveX:0, moveY:0, aimX:0, fireL:false, fireR:false, boost:false };
+const IS_TOUCH = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
+
+addEventListener('keydown',e=>{ keys[e.code]=1; });
+addEventListener('keyup',e=>{ keys[e.code]=0; });
+
+function setupTouch(){
+  const ms=document.getElementById('moveStick'), as=document.getElementById('aimStick');
+  let moveId=null, aimId=null, moveO=null, aimO=null; const R=58;
+  function showStick(el,x,y){ el.style.display='block'; el.style.left=x+'px'; el.style.top=y+'px'; el.firstElementChild.style.transform='translate(-50%,-50%)'; }
+  function knob(el,dx,dy){ el.firstElementChild.style.transform=`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`; }
+  document.getElementById('moveZone').addEventListener('touchstart',e=>{ e.preventDefault(); if(moveId!==null)return;
+    const t=e.changedTouches[0]; moveId=t.identifier; moveO={x:t.clientX,y:t.clientY}; showStick(ms,t.clientX,t.clientY); },{passive:false});
+  document.getElementById('aimZone').addEventListener('touchstart',e=>{ e.preventDefault(); if(aimId!==null)return;
+    const t=e.changedTouches[0]; aimId=t.identifier; aimO={x:t.clientX,y:t.clientY}; showStick(as,t.clientX,t.clientY); },{passive:false});
+  addEventListener('touchmove',e=>{ for(const t of e.changedTouches){
+    if(t.identifier===moveId){ let dx=t.clientX-moveO.x,dy=t.clientY-moveO.y; const d=Math.hypot(dx,dy),k=d>R?R/d:1; dx*=k;dy*=k;
+      touch.moveX=dx/R; touch.moveY=-dy/R; knob(ms,dx,dy); e.preventDefault(); }
+    else if(t.identifier===aimId){ let dx=t.clientX-aimO.x,dy=t.clientY-aimO.y; const d=Math.hypot(dx,dy),k=d>R?R/d:1; dx*=k;dy*=k;
+      touch.aimX=dx/R; knob(as,dx,dy); e.preventDefault(); }
+  }},{passive:false});
+  function end(e){ for(const t of e.changedTouches){
+    if(t.identifier===moveId){ moveId=null; touch.moveX=touch.moveY=0; ms.style.display='none'; }
+    else if(t.identifier===aimId){ aimId=null; touch.aimX=0; as.style.display='none'; }
+  }}
+  addEventListener('touchend',end); addEventListener('touchcancel',end);
+  const bind=(id,prop)=>{ const el=document.getElementById(id);
+    el.addEventListener('touchstart',e=>{ e.preventDefault(); touch[prop]=true; el.classList.add('on'); },{passive:false});
+    const off=e=>{ e.preventDefault(); touch[prop]=false; el.classList.remove('on'); };
+    el.addEventListener('touchend',off); el.addEventListener('touchcancel',off);
+  };
+  bind('btnL','fireL'); bind('btnR','fireR'); bind('btnBoost','boost');
+}
+
+function makeMechEntity(lo, team, x, z){
+  const build=buildMech(lo, team===0?0x4f9fff:0xff5a5a);
+  scene.add(build.group);
+  const s=computeStatsFor(lo);
+  const ent={
+    build, lo, team, hp:s.hp, maxhp:s.hp, dr:s.dr, spd:s.spd,
+    pos:new THREE.Vector3(x,0,z), heading:team===0?0:Math.PI, // facing
+    cdL:0, cdR:0, cdAuto:0, boost:1, boosting:false,
+    walkPhase:0, vel:new THREE.Vector3(), alive:true, recoil:0, hitFlash:0,
+    ai: team!==0,
+  };
+  return ent;
+}
+function computeStatsFor(lo){
+  const T=TORSOS[lo.torso],A=ARMORS[lo.armor],L=LEGS[lo.legs],B=BACKPACKS[lo.back];
+  const hp=T.hp+(L.hp||0);
+  const dr=Math.min(0.75, A.dr + (B.dr||0) + (lo.armL==='shield'?0.25:0) + (lo.armR==='shield'?0.25:0));
+  const spd=Math.max(0.3,(T.spd+A.spd+(B.spd||0))*L.spd);
+  return {hp,dr,spd};
+}
+
+// ---------- ARENA ----------
+function buildArena(){
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(ARENA*2,ARENA*2), mat(0x141c26,{r:0.95,m:0.0}));
+  ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground);
+  const grid=new THREE.GridHelper(ARENA*2,40,0x223a52,0x16242f); grid.position.y=0.02; scene.add(grid);
+  // perimeter walls
+  const wallMat=mat(0x2a3340,{m:0.3});
+  for(let i=0;i<4;i++){
+    const w=new THREE.Mesh(new THREE.BoxGeometry(i<2?ARENA*2:4,8,i<2?4:ARENA*2), wallMat);
+    w.position.set(i===0?0:i===1?0:i===2?-ARENA:ARENA, 4, i===0?-ARENA:i===1?ARENA:0);
+    w.castShadow=w.receiveShadow=true; scene.add(w);
+  }
+  // scattered cover blocks
+  for(let i=0;i<14;i++){
+    const s=4+Math.random()*7;
+    const b=box(s,s,s,0x232c38,{r:0.8});
+    b.position.set((Math.random()-0.5)*ARENA*1.5, s/2, (Math.random()-0.5)*ARENA*1.5);
+    if(b.position.length()<18) b.position.multiplyScalar(2);
+    scene.add(b);
+  }
+}
+
+// =====================================================================
+//  DEPLOY -> start battle
+// =====================================================================
+document.getElementById('deploy').onclick=deploy;
+function deploy(){
+  document.getElementById('garage').style.display='none';
+  document.getElementById('hud').style.display='block';
+  state='battle';
+  buildArena();
+  addLights(scene);
+  // player
+  player=makeMechEntity(loadout, 0, 0, ARENA*0.7);
+  player.ai=false; mechs.push(player);
+  aimYaw=player.heading=Math.PI; // face into arena
+  // snap camera straight to the follow pose so there's no startup swing
+  { const back=new THREE.Vector3(Math.sin(aimYaw),0,Math.cos(aimYaw)).multiplyScalar(-16);
+    camera.position.copy(player.pos.clone().add(back)).setY(10);
+    camTarget.copy(player.pos.clone().add(new THREE.Vector3(0,3,0)));
+    camera.lookAt(camTarget); }
+  window.__dbg={ player, mechs, tick:()=>{ updateBattle(0.016); renderer.render(scene,camera); } };
+  // enemies — randomized loadouts
+  const enemyKits=randomEnemyKits(4);
+  enemyKits.forEach((kit,i)=>{
+    const ang=(i/enemyKits.length)*Math.PI*2;
+    const e=makeMechEntity(kit, 1, Math.cos(ang)*ARENA*0.55, Math.sin(ang)*ARENA*0.55 - ARENA*0.5);
+    mechs.push(e);
+  });
+  buildWeaponCards();
+  // show touch controls + tweak the hint on mobile
+  if(IS_TOUCH){
+    document.getElementById('touch').style.display='block';
+    document.getElementById('hint').innerHTML='Left stick move &nbsp;·&nbsp; Right stick aim &nbsp;·&nbsp; L/R fire &nbsp;·&nbsp; Boost';
+  }
+  // pointer lock for mouse-aim (desktop only)
+  const cv=document.getElementById('c');
+  if(!IS_TOUCH){
+    cv.addEventListener('click',()=>{ if(state==='battle') cv.requestPointerLock(); });
+    document.addEventListener('mousemove',e=>{ if(document.pointerLockElement===cv){ aimYaw -= e.movementX*0.0025; } });
+    document.addEventListener('mousedown',e=>{ if(document.pointerLockElement===cv){ if(e.button===0)mouse.down|=1; if(e.button===2)mouse.down|=2; } });
+    document.addEventListener('mouseup',e=>{ if(e.button===0)mouse.down&=~1; if(e.button===2)mouse.down&=~2; });
+  }
+  addEventListener('contextmenu',e=>e.preventDefault());
+}
+function randomEnemyKits(n){
+  const tk=Object.keys(TORSOS),ak=Object.keys(ARMORS),lk=Object.keys(LEGS),bk=Object.keys(BACKPACKS);
+  const wk=Object.keys(WEAPONS).filter(w=>w!=='none');
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  const out=[];
+  for(let i=0;i<n;i++) out.push({ torso:pick(tk),armor:pick(ak),legs:pick(lk),armL:pick(wk),armR:pick(wk),back:pick(bk) });
+  return out;
+}
+function buildWeaponCards(){
+  const wrap=document.getElementById('weapons'); wrap.innerHTML='';
+  [['L',loadout.armL],['R',loadout.armR]].forEach(([side,wid])=>{
+    const W=WEAPONS[wid];
+    const c=document.createElement('div'); c.className='wcard';
+    c.innerHTML=`<div class="wn">${W.name}</div><div class="wk">${side}-ARM · ${W.type}</div><div class="cd"><i data-cd="${side}"></i></div>`;
+    wrap.appendChild(c);
+  });
+}
+
+// =====================================================================
+//  COMBAT
+// =====================================================================
+function worldMuzzle(ent, side){
+  // approximate muzzle position in world space
+  const f=new THREE.Vector3(Math.sin(ent.heading),0,Math.cos(ent.heading));
+  const r=new THREE.Vector3(f.z,0,-f.x);
+  const p=ent.pos.clone();
+  p.y=ent.build.baseY+1.4*ent.build.sz+1.5;
+  p.add(r.multiplyScalar(side*1.4*ent.build.sz));
+  p.add(f.clone().multiplyScalar(2.2));
+  return p;
+}
+function fireWeapon(ent, side){
+  const wid = side<0 ? ent.lo.armR : ent.lo.armL;
+  const W=WEAPONS[wid]; if(!W||W.type==='none'||W.type==='shield') return false;
+  const cdKey = side<0?'cdR':'cdL';
+  if(ent[cdKey]>0) return false;
+  let cd=W.cd; const _bp=BACKPACKS[ent.lo.back]; if(_bp.firerate) cd*=_bp.firerate;
+  ent[cdKey]=cd;
+  ent.recoil=0.4;
+  const origin=worldMuzzle(ent,side);
+  const dir=new THREE.Vector3(Math.sin(ent.heading),0,Math.cos(ent.heading));
+
+  if(W.type==='melee'){
+    meleeSwing(ent, W, origin, dir); return true;
+  }
+  if(W.type==='hitscan'){
+    hitscan(ent, W, origin, dir); return true;
+  }
+  if(W.mine){ // deploy proximity mine(s) in front of the mech
+    const n=W.salvo||1;
+    for(let i=0;i<n;i++){ const off=dir.clone().multiplyScalar(4+Math.random()*3); off.x+=(Math.random()-0.5)*4; off.z+=(Math.random()-0.5)*4; dropMine(ent,W,off); }
+    return true;
+  }
+  // ranged
+  const salvo=W.salvo||1;
+  const gfx=W.gfx||wid;
+  let sp = W.spread!=null ? W.spread : (salvo>1?0.12:0);
+  if(gfx==='mg') sp=Math.max(sp,0.06);
+  if(W.range<30) sp=Math.max(sp,0.18); // flame cone
+  for(let i=0;i<salvo;i++){
+    const d=dir.clone();
+    if(sp){ d.x+=(Math.random()-0.5)*sp; d.z+=(Math.random()-0.5)*sp; d.normalize(); }
+    spawnProjectile(ent, W, origin.clone(), d, wid);
+  }
+  return true;
+}
+function spawnProjectile(ent, W, pos, dir, wid){
+  let geo, col=W.col||0xffffff; const gfx=W.gfx||wid;
+  if(gfx==='rockets'||gfx==='missiles'||gfx==='rpg'||gfx==='seeker'){ geo=new THREE.ConeGeometry(gfx==='rpg'?0.26:0.18,gfx==='rpg'?1.2:0.9,8); } // rockets
+  else if(W.pierce){ geo=new THREE.CylinderGeometry(0.08,0.08,1.1,6); } // slug/rail/harpoon
+  else if(W.splash){ geo=new THREE.SphereGeometry(0.3,8,8); }  // shells/bombs
+  else { geo=new THREE.SphereGeometry(0.16,6,6); }
+  const m=new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:0.6}));
+  if(geo.type==='ConeGeometry'||geo.type==='CylinderGeometry'){ m.rotation.x=Math.PI/2; }
+  m.position.copy(pos);
+  scene.add(m);
+  let vel=null;
+  if(W.lob){ vel=dir.clone().multiplyScalar(W.pspd); vel.y += W.lob; } // ballistic launch (upward component)
+  projectiles.push({ mesh:m, dir:dir.clone(), spd:W.pspd, dmg:W.dmg, range:W.range||220, splash:W.splash||0,
+    team:ent.team, traveled:0, owner:ent, pierce:!!W.pierce, hitSet:new Set(),
+    track:!!W.track, turn:(typeof W.track==='number'?W.track:2.6), target:null,
+    trackT:(W.trackTime!=null?W.trackTime:(W.track?Infinity:0)), arc:!!W.lob, vel });
+}
+function meleeSwing(ent, W, origin, dir){
+  // arc swing visual
+  const ring=new THREE.Mesh(new THREE.RingGeometry(W.range*0.4,W.range*0.55,16,1,0,Math.PI),
+    new THREE.MeshBasicMaterial({color:0xff9a5a,transparent:true,opacity:0.5,side:THREE.DoubleSide}));
+  ring.rotation.x=-Math.PI/2; ring.position.copy(ent.pos); ring.position.y=2;
+  ring.rotation.z=-ent.heading;
+  scene.add(ring); effects.push({mesh:ring,life:0.18,fade:true});
+  // damage in cone in front
+  mechs.forEach(t=>{
+    if(!t.alive||t.team===ent.team) return;
+    const to=t.pos.clone().sub(ent.pos); const dist=to.length();
+    if(dist>W.range+ t.build.sz*1.5) return;
+    to.normalize();
+    if(to.dot(dir)>0.3) dealDamage(t, W.dmg, ent);
+  });
+}
+function hitscan(ent, W, origin, dir){
+  // find nearest enemy along ray
+  let best=null,bestT=W.range;
+  mechs.forEach(t=>{
+    if(!t.alive||t.team===ent.team) return;
+    const to=t.pos.clone(); to.y=origin.y; to.sub(origin);
+    const proj=to.dot(dir); if(proj<0||proj>W.range) return;
+    const perp=to.clone().sub(dir.clone().multiplyScalar(proj)).length();
+    if(perp < t.build.sz*1.6 && proj<bestT){ best=t; bestT=proj; }
+  });
+  const end=origin.clone().add(dir.clone().multiplyScalar(bestT));
+  // beam
+  const g=new THREE.BufferGeometry().setFromPoints([origin,end]);
+  const beam=new THREE.Line(g,new THREE.LineBasicMaterial({color:W.col,transparent:true,opacity:0.9}));
+  scene.add(beam); effects.push({mesh:beam,life:0.1,fade:true});
+  if(best) dealDamage(best, W.dmg, ent);
+}
+function dealDamage(t, dmg, src){
+  if(!t.alive) return;
+  const final=dmg*(1-t.dr);
+  t.hp-=final; t.hitFlash=0.15;
+  if(t.ai){ t.aggro=src; t.aggroT=4; }
+  spawnHitSpark(t.pos.clone().setY(2));
+  if(t.hp<=0){ t.hp=0; killMech(t); }
+}
+function killMech(t){
+  t.alive=false;
+  // explosion
+  for(let i=0;i<14;i++){
+    const p=box(0.4+Math.random()*0.5,0.4,0.4,Math.random()<0.5?0xff8a3a:0x555a60);
+    p.position.copy(t.pos).setY(2+Math.random()*2);
+    scene.add(p);
+    effects.push({mesh:p,life:0.8+Math.random()*0.6,vel:new THREE.Vector3((Math.random()-0.5)*14,6+Math.random()*8,(Math.random()-0.5)*14),grav:true,fade:true});
+  }
+  const flash=new THREE.PointLight(0xff8a3a,5,30); flash.position.copy(t.pos).setY(3); scene.add(flash);
+  effects.push({mesh:flash,life:0.3,fade:true,light:true});
+  // sink the wreck
+  t.wreckT=0;
+}
+function spawnHitSpark(pos){
+  const s=box(0.3,0.3,0.3,0xffd060); s.position.copy(pos); scene.add(s);
+  effects.push({mesh:s,life:0.2,fade:true,vel:new THREE.Vector3(0,4,0),grav:true});
+}
+
+// =====================================================================
+//  UPDATE
+// =====================================================================
+function updateBattle(dt){
+  // --- player input ---
+  if(player.alive){
+    let mvF=0,mvS=0;
+    if(keys['KeyW'])mvF+=1; if(keys['KeyS'])mvF-=1;
+    if(keys['KeyA'])mvS-=1; if(keys['KeyD'])mvS+=1;
+    mvF+=touch.moveY; mvS+=touch.moveX;          // mobile move stick
+    mvF=Math.max(-1,Math.min(1,mvF)); mvS=Math.max(-1,Math.min(1,mvS));
+    if(touch.aimX) aimYaw -= touch.aimX*dt*2.8;   // mobile aim stick rotates view
+    player.heading=aimYaw;
+    const wantBoost = !!keys['ShiftLeft'] || touch.boost;
+    player.boosting = wantBoost && player.boost>0.05 && (mvF||mvS);
+    let spd=player.spd*9 * (player.boosting?1.9:1);
+    const f=new THREE.Vector3(Math.sin(aimYaw),0,Math.cos(aimYaw));
+    const r=new THREE.Vector3(-f.z,0,f.x); // screen-right strafe (was inverted)
+    const move=f.multiplyScalar(mvF).add(r.multiplyScalar(mvS));
+    if(move.lengthSq()>0){ move.normalize().multiplyScalar(spd); player.walkPhase+=dt*spd*0.9; }
+    player.vel.lerp(move, 0.2);
+    if(player.boosting){ player.boost-=dt*0.5; }
+    else { const reg=0.22*(BACKPACKS[player.lo.back].boost||1); player.boost=Math.min(1,player.boost+dt*reg); }
+    // fire
+    if((mouse.down&1)||touch.fireL) fireWeapon(player,1);   // left arm
+    if((mouse.down&2)||touch.fireR) fireWeapon(player,-1);  // right arm
+  } else { player.vel.multiplyScalar(0.8); }
+
+  // --- AI ---
+  mechs.forEach(e=>{ if(e.ai && e.alive) updateAI(e,dt); });
+
+  // --- integrate movement + cooldowns for all ---
+  mechs.forEach(e=>{
+    if(e.cdL>0)e.cdL-=dt; if(e.cdR>0)e.cdR-=dt; if(e.cdAuto>0)e.cdAuto-=dt;
+    if(e.recoil>0)e.recoil-=dt*3; if(e.hitFlash>0)e.hitFlash-=dt;
+    if(!e.alive){ // sink wreck
+      e.wreckT=(e.wreckT||0)+dt;
+      e.build.group.position.y=-Math.min(4,e.wreckT*1.5);
+      e.build.group.rotation.z=Math.min(0.4,e.wreckT*0.3);
+      return;
+    }
+    e.pos.add(e.vel.clone().multiplyScalar(dt));
+    // arena bounds
+    const lim=ARENA-3;
+    e.pos.x=Math.max(-lim,Math.min(lim,e.pos.x));
+    e.pos.z=Math.max(-lim,Math.min(lim,e.pos.z));
+    // separation between mechs
+    mechs.forEach(o=>{ if(o!==e&&o.alive){ const d=e.pos.clone().sub(o.pos); const dl=d.length(); const min=(e.build.sz+o.build.sz)*2.2; if(dl<min&&dl>0.01){ e.pos.add(d.normalize().multiplyScalar((min-dl)*0.5)); } } });
+    // backpack passives (regen + auto-fire) read straight off the catalog fields
+    const bp=BACKPACKS[e.lo.back];
+    if(bp.regen && e.hp<e.maxhp) e.hp=Math.min(e.maxhp,e.hp+bp.regen*dt);
+    if(bp.auto && e.cdAuto<=0){ const tgt=nearestEnemy(e); if(tgt && tgt.pos.distanceTo(e.pos)<bp.auto.range){ e.cdAuto=bp.auto.cd; autoMissile(e,tgt,bp.auto); } }
+    syncMechVisual(e,dt);
+  });
+
+  // --- projectiles ---
+  for(let i=projectiles.length-1;i>=0;i--){
+    const p=projectiles[i];
+    let step;
+    if(p.arc){ // ballistic lob — gravity pulls it down into an arc
+      p.vel.y -= 32*dt;
+      const dpos=p.vel.clone().multiplyScalar(dt); p.mesh.position.add(dpos);
+      step=dpos.length(); p.traveled+=step;
+      if(p.mesh.geometry.type==='ConeGeometry') p.mesh.quaternion.setFromUnitVectors(UP_Y, p.vel.clone().normalize());
+    } else {
+      step=p.spd*dt; p.traveled+=step;
+      if(p.track && p.trackT>0){ // homing (full or semi — trackT seconds of guidance)
+        if(!p.target || !p.target.alive) p.target=nearestEnemyToPoint(p.mesh.position,p.team);
+        if(p.target){
+          const want=p.target.pos.clone().setY(p.mesh.position.y+1).sub(p.mesh.position).normalize();
+          p.dir.lerp(want, Math.min(1,p.turn*dt)).normalize();
+          if(p.mesh.geometry.type==='ConeGeometry') p.mesh.quaternion.setFromUnitVectors(UP_Y, p.dir);
+        }
+        p.trackT-=dt;
+      }
+      p.mesh.position.add(p.dir.clone().multiplyScalar(step));
+    }
+    let hit=false;
+    for(const t of mechs){
+      if(!t.alive||t.team===p.team)continue;
+      const d=t.pos.clone(); d.y=p.mesh.position.y;
+      if(p.mesh.position.distanceTo(d) < t.build.sz*2.0){
+        if(p.pierce){ // pass through up to 3 distinct targets (TABS-style cap)
+          if(!p.hitSet.has(t)){ p.hitSet.add(t); dealDamage(t,p.dmg,p.owner); }
+          if(p.hitSet.size>=3) hit=true;
+        } else {
+          if(p.splash) explode(p.mesh.position.clone(),p.team,p.dmg,p.splash,p.owner);
+          else dealDamage(t,p.dmg,p.owner);
+          hit=true;
+        }
+        if(hit) break;
+      }
+    }
+    const expired = (!p.arc && p.traveled>p.range) || p.mesh.position.y<0.2;
+    if(hit||expired){
+      if(p.splash && !hit && expired) explode(p.mesh.position.clone(),p.team,p.dmg,p.splash,p.owner);
+      scene.remove(p.mesh); projectiles.splice(i,1);
+    }
+  }
+
+  // --- mines ---
+  updateMines(dt);
+
+  // --- effects ---
+  for(let i=effects.length-1;i>=0;i--){
+    const f=effects[i]; f.life-=dt;
+    if(f.vel){ if(f.grav)f.vel.y-=24*dt; f.mesh.position.add(f.vel.clone().multiplyScalar(dt)); }
+    if(f.fade && f.mesh.material){ f.mesh.material.transparent=true; f.mesh.material.opacity=Math.max(0,f.life/0.3); }
+    if(f.light) f.mesh.intensity=Math.max(0,f.life*16);
+    if(f.life<=0){ scene.remove(f.mesh); effects.splice(i,1); }
+  }
+
+  updateCamera(dt);
+  updateHUD();
+  checkWin();
+}
+
+function explode(pos,team,dmg,rad,owner){
+  mechs.forEach(t=>{ if(t.alive&&t.team!==team){ const d=t.pos.distanceTo(pos); if(d<rad+t.build.sz){ dealDamage(t,dmg*(1-d/(rad+t.build.sz)*0.6),owner); } } });
+  const ring=new THREE.Mesh(new THREE.SphereGeometry(rad*0.6,10,10),new THREE.MeshBasicMaterial({color:0xff9a4a,transparent:true,opacity:0.7}));
+  ring.position.copy(pos); scene.add(ring); effects.push({mesh:ring,life:0.3,fade:true,grow:true});
+  const fl=new THREE.PointLight(0xff8a3a,4,rad*2); fl.position.copy(pos); scene.add(fl); effects.push({mesh:fl,life:0.25,fade:true,light:true});
+}
+function autoMissile(e,tgt,W){
+  const origin=e.pos.clone().setY(e.build.baseY+1.4*e.build.sz+2);
+  const dir=tgt.pos.clone().setY(origin.y).sub(origin).normalize();
+  spawnProjectile(e,{...W,col:W.col||0xb47a4a},origin,dir,'missiles');
+}
+function dropMine(ent,W,off){
+  const pos=ent.pos.clone().add(off); pos.y=0.35;
+  pos.x=Math.max(-(ARENA-3),Math.min(ARENA-3,pos.x)); pos.z=Math.max(-(ARENA-3),Math.min(ARENA-3,pos.z));
+  const g=new THREE.Group(); g.position.copy(pos);
+  const puck=cyl(0.5,0.6,0.25,0x33393f); g.add(puck);
+  const light=new THREE.Mesh(new THREE.SphereGeometry(0.13,8,8), mat(W.col,{emissive:W.col,emissiveIntensity:1.2})); light.position.y=0.2; g.add(light);
+  for(let i=0;i<3;i++){ const spike=box(0.08,0.3,0.08,0x55606e); spike.position.set(Math.cos(i/3*6.28)*0.4,0.1,Math.sin(i/3*6.28)*0.4); g.add(spike); }
+  scene.add(g);
+  mines.push({ mesh:g, light, pos, team:ent.team, dmg:W.dmg, radius:W.splash||7, life:22, armT:0.6, owner:ent, blink:0 });
+}
+function updateMines(dt){
+  for(let i=mines.length-1;i>=0;i--){
+    const m=mines[i]; m.life-=dt; let boom=false;
+    if(m.armT>0){ m.armT-=dt; }                  // arming delay
+    else { for(const t of mechs){ if(t.alive&&t.team!==m.team && t.pos.distanceTo(m.pos)<m.radius*0.55+t.build.sz){ boom=true; break; } } }
+    m.blink+=dt; m.light.material.emissiveIntensity = m.armT>0 ? 0.4 : (0.6+Math.abs(Math.sin(m.blink*6))*0.9);
+    if(boom || m.life<=0){
+      if(boom) explode(m.pos.clone(),m.team,m.dmg,m.radius,m.owner);
+      scene.remove(m.mesh); mines.splice(i,1);
+    }
+  }
+}
+
+function nearestEnemy(e){
+  let best=null,bd=1e9;
+  mechs.forEach(o=>{ if(o.alive&&o.team!==e.team){ const d=o.pos.distanceTo(e.pos); if(d<bd){bd=d;best=o;} } });
+  return best;
+}
+const UP_Y=new THREE.Vector3(0,1,0);
+function nearestEnemyToPoint(pt,team){ // for homing projectiles
+  let best=null,bd=1e9;
+  mechs.forEach(o=>{ if(o.alive&&o.team!==team){ const d=o.pos.distanceTo(pt); if(d<bd){bd=d;best=o;} } });
+  return best;
+}
+function updateAI(e,dt){
+  let tgt = (e.aggroT>0 && e.aggro && e.aggro.alive) ? e.aggro : nearestEnemy(e);
+  if(e.aggroT>0)e.aggroT-=dt;
+  if(!tgt){ e.vel.multiplyScalar(0.9); return; }
+  const to=tgt.pos.clone().sub(e.pos); const dist=to.length(); to.normalize();
+  // desired heading toward target
+  const desired=Math.atan2(to.x,to.z);
+  let dh=desired-e.heading; while(dh>Math.PI)dh-=2*Math.PI; while(dh<-Math.PI)dh+=2*Math.PI;
+  e.heading+=Math.max(-e.build.L.turn*dt,Math.min(e.build.L.turn*dt,dh));
+  // preferred range = min weapon range (melee wants close)
+  const ranges=[WEAPONS[e.lo.armL],WEAPONS[e.lo.armR]].filter(w=>w.range).map(w=>w.range);
+  const wantMelee = (WEAPONS[e.lo.armL].type==='melee'||WEAPONS[e.lo.armR].type==='melee');
+  const ideal = wantMelee?6: (ranges.length?Math.min(...ranges)*0.7:40);
+  let mv=0;
+  if(dist>ideal+4) mv=1; else if(dist<ideal-6) mv=-0.6;
+  // strafe a little
+  const f=new THREE.Vector3(Math.sin(e.heading),0,Math.cos(e.heading));
+  const r=new THREE.Vector3(f.z,0,-f.x);
+  e.strafe=(e.strafe||0)+ (Math.random()-0.5)*dt;
+  e.strafe=Math.max(-1,Math.min(1,e.strafe*0.99));
+  const move=f.multiplyScalar(mv).add(r.multiplyScalar(e.strafe*0.5));
+  if(move.lengthSq()>0){ move.normalize().multiplyScalar(e.spd*7); e.walkPhase+=dt*6; }
+  e.vel.lerp(move,0.1);
+  // fire when roughly aimed & in range
+  const aimed=Math.abs(dh)<0.35;
+  [['armL',1],['armR',-1]].forEach(([slot,side])=>{
+    const W=WEAPONS[e.lo[slot]];
+    if(W.range && dist<W.range && (aimed||W.type==='melee')) fireWeapon(e,side);
+  });
+}
+
+// ---------- VISUAL SYNC ----------
+function syncMechVisual(e,dt){
+  const g=e.build.group;
+  g.position.set(e.pos.x,0,e.pos.z);
+  g.rotation.y=e.heading;
+  // walk bob + leg swing
+  const speed=e.vel.length();
+  const moving=speed>0.5;
+  const p=e.parts=e.build.parts;
+  if(p.legGroups.length){
+    p.legGroups.forEach((lg,i)=>{
+      const ph=e.walkPhase + i*Math.PI;
+      lg.rotation.x = moving? Math.sin(ph)*0.5 : 0;
+      lg.position.y = moving? Math.abs(Math.cos(ph))*0.15 : 0;
+    });
+    p.leanRoot.position.y = moving? Math.abs(Math.sin(e.walkPhase*2))*0.12 : 0;
+  }
+  if(p.wheels.length){ p.wheels.forEach(w=>w.rotation.x += speed*dt*0.6); }
+  if(p.hover){ // gentle idle float + thruster flicker
+    p.leanRoot.position.y = Math.sin(performance.now()*0.003)*0.18 + (moving?0.1:0);
+    if(p.hoverPads) p.hoverPads.forEach(pd=>{ pd.material.emissiveIntensity=0.7+Math.random()*0.5; });
+  }
+  // torso lean from velocity (semi-physical)
+  const localV=e.vel.clone();
+  p.torso.rotation.x = -Math.min(0.2,speed*0.012);
+  // recoil tilt
+  p.torso.rotation.x += e.recoil*0.3;
+  // chainsaw spin
+  [p.armL,p.armR].forEach(a=>{ const wm=a.userData.weaponMesh; if(wm&&wm.userData.spin){ wm.userData.spin.children.forEach(t=>{}); wm.userData.spin.rotation.z+=dt*25; } });
+  // jet flames
+  if(p.jetFlames){ const on=e.boosting; p.jetFlames.forEach(fl=>{ fl.visible=on; if(on)fl.scale.y=0.7+Math.random()*0.8; }); }
+  // hit flash
+  e.build.parts.torso.children.forEach(c=>{ if(c.material&&c.material.emissive){ /* keep */ } });
+  g.traverse(o=>{ if(o.isMesh&&o.material&&o.material.emissive!==undefined){} });
+  // simple hit tint on chest
+  const chest=p.torso.children[0];
+  if(chest&&chest.material){
+    if(e.hitFlash>0){ chest.material.emissive=new THREE.Color(0xff3030); chest.material.emissiveIntensity=e.hitFlash*4; }
+    else { chest.material.emissive=new THREE.Color(p.teamCol); chest.material.emissiveIntensity=0.18; }
+  }
+}
+
+// ---------- CAMERA (3rd person follow) ----------
+const camTarget=new THREE.Vector3();
+function updateCamera(dt){
+  const back=new THREE.Vector3(Math.sin(aimYaw),0,Math.cos(aimYaw)).multiplyScalar(-16);
+  const want=player.pos.clone().add(back); want.y=10;
+  camera.position.lerp(want, 1-Math.pow(0.001,dt));
+  camTarget.lerp(player.pos.clone().add(new THREE.Vector3(0,3,0)),1-Math.pow(0.001,dt));
+  camera.lookAt(camTarget);
+}
+
+// ---------- HUD ----------
+function updateHUD(){
+  document.querySelector('#hpbar>i').style.width=(player.hp/player.maxhp*100)+'%';
+  document.querySelector('#boostbar>i').style.width=(player.boost*100)+'%';
+  const alive=mechs.filter(m=>m.team===1&&m.alive).length;
+  document.getElementById('enemyCount').textContent='ENEMIES REMAINING: '+alive;
+  const cdL=document.querySelector('[data-cd="L"]'), cdR=document.querySelector('[data-cd="R"]');
+  if(cdL){ const W=WEAPONS[loadout.armL]; cdL.style.width=W.cd?Math.max(0,player.cdL/W.cd*100)+'%':'0%'; }
+  if(cdR){ const W=WEAPONS[loadout.armR]; cdR.style.width=W.cd?Math.max(0,player.cdR/W.cd*100)+'%':'0%'; }
+}
+function checkWin(){
+  if(state!=='battle')return;
+  if(!player.alive){ endGame(false); }
+  else if(mechs.filter(m=>m.team===1&&m.alive).length===0){ endGame(true); }
+}
+let endTimer=0;
+function endGame(won){
+  if(state==='over')return;
+  state='over';
+  if(document.pointerLockElement)document.exitPointerLock();
+  document.getElementById('touch').style.display='none';
+  touch.moveX=touch.moveY=touch.aimX=0; touch.fireL=touch.fireR=touch.boost=false;
+  setTimeout(()=>{
+    document.getElementById('end').style.display='flex';
+    document.getElementById('endTitle').textContent=won?'VICTORY':'DESTROYED';
+    document.getElementById('endTitle').style.color=won?'#7ff0a8':'#ff6a6a';
+    document.getElementById('endText').textContent=won?'All hostile mechs eliminated.':'Your chassis was wrecked.';
+  },1200);
+}
+
+// =====================================================================
+//  MAIN LOOP
+// =====================================================================
+function loop(){
+  requestAnimationFrame(loop);
+  const dt=Math.min(0.05, clock.getDelta());
+  if(state==='battle' || state==='over'){
+    if(state==='battle') updateBattle(dt);
+    else { // keep effects + camera ticking on game over
+      mechs.forEach(e=>{ if(!e.alive){ e.wreckT=(e.wreckT||0)+dt; e.build.group.position.y=-Math.min(4,e.wreckT*1.5); } });
+      for(let i=effects.length-1;i>=0;i--){ const f=effects[i]; f.life-=dt; if(f.vel){if(f.grav)f.vel.y-=24*dt; f.mesh.position.add(f.vel.clone().multiplyScalar(dt));} if(f.life<=0){scene.remove(f.mesh);effects.splice(i,1);} }
+      updateCamera(dt);
+    }
+    renderer.render(scene,camera);
+  } else if(state==='garage'){
+    if(previewMech){ previewMech.group.rotation.y+=dt*0.5; }
+    previewRender();
+  }
+}
+// preview uses the same renderer, drawn to a viewport over the #preview div
+function previewRender(){
+  const el=previewEl(); const r=el.getBoundingClientRect();
+  renderer.setViewport(r.left, innerHeight-r.bottom, r.width, r.height);
+  renderer.setScissor(r.left, innerHeight-r.bottom, r.width, r.height);
+  renderer.setScissorTest(true);
+  previewCam.aspect=r.width/r.height; previewCam.updateProjectionMatrix();
+  renderer.render(previewScene,previewCam);
+  renderer.setScissorTest(false);
+  renderer.setViewport(0,0,innerWidth,innerHeight);
+}
+
+// =====================================================================
+//  BOOT
+// =====================================================================
+initThree();
+buildPicker();
+updateStats();
+initPreview();
+setupTouch();
+loop();
+</script>
+</body>
+</html>
