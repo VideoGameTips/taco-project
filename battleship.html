@@ -1497,8 +1497,14 @@ function loop(){
   renderer.render(scene,camera);
 }
 
-// boot
-initThree(); initWaterBase(); buildMenu(); loop();
+// boot — show the menu immediately (pure DOM), then start 3D once Three.js is ready.
+// (some hosts, e.g. htmlpreview.github.io, run this script before the CDN <script> finishes.)
+buildMenu();
+function start3D(){ try{ initThree(); initWaterBase(); loop(); }catch(e){ console.error(e);
+  const sub=document.querySelector('#menu .sub'); if(sub) sub.textContent='Could not start the 3D engine — try GitHub Pages or open the file directly.'; } }
+if(window.THREE){ start3D(); }
+else { let n=0; (function wait(){ if(window.THREE){ start3D(); } else if(n++<200){ setTimeout(wait,50); }
+  else { const sub=document.querySelector('#menu .sub'); if(sub) sub.textContent='Three.js failed to load (check connection / use GitHub Pages).'; } })(); }
 </script>
 </body>
 </html>

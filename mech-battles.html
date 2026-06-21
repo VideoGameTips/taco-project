@@ -1276,12 +1276,13 @@ function previewRender(){
 // =====================================================================
 //  BOOT
 // =====================================================================
-initThree();
+// DOM-only UI first so the garage always shows, then start 3D once Three.js is ready
 buildPicker();
 updateStats();
-initPreview();
 setupTouch();
-loop();
+function start3D(){ try{ initThree(); initPreview(); loop(); }catch(e){ console.error(e); } }
+if(window.THREE){ start3D(); }
+else { let n=0; (function wait(){ if(window.THREE){ start3D(); } else if(n++<200){ setTimeout(wait,50); } })(); }
 </script>
 </body>
 </html>
