@@ -164,6 +164,7 @@ const SHIPS = {
   carrier:    { name:'Aircraft Carrier', cls:'Flat-top',len:100,beam:19, depth:5.0, deckY:4.6, hp:560, kind:'carrier', mounts:8,
                 desc:'Vast flight deck to roam, island bridge to starboard. Bomb bays.' },
 };
+Object.values(SHIPS).forEach(s=>s.mounts*=2);   // doubled turret capacity on every hull
 // kinds: gun (straight), cannon (arc), missile (homing), torpedo (water-skim), bomb (arc lob)
 const WEAPONS = {
   deckgun: { name:'Deck Gun',        cost:300, dmg:16, cd:0.55, spd:130, kind:'gun',     col:0xb8bcc4, size:0.8 },
@@ -959,7 +960,7 @@ function fleetRange(){ return teamRange(0); }
 const camYaw={v:0}, camPitch={v:0};
 const keys={};
 let walkPos=new THREE.Vector3();
-const EYE=1.7, WALK=9;
+const EYE=0.85, WALK=9;   // half-height eye level — lower first-person camera
 let mouseDownFire=false;
 
 addEventListener('keydown',e=>{ keys[e.code]=1; if(e.code==='Tab'){ e.preventDefault(); toggleShop(); } if(e.code==='Space') e.preventDefault();
@@ -967,7 +968,8 @@ addEventListener('keydown',e=>{ keys[e.code]=1; if(e.code==='Tab'){ e.preventDef
   if(e.code==='KeyH') toggleHarbor(); if(e.code==='KeyM') sfxToggle(); if(e.code==='KeyC') toggleDive();
   if(e.code==='KeyB') toggleBuild();
   if(e.code==='KeyA' && !e.repeat) tryDispatchPlane();   // A next to a parked plane → AI pilot (single press, won't fire while held to walk)
-  if(e.code==='KeyQ') cycleGun(); });                    // Q cycles your owned small arms while ashore
+  if(e.code==='KeyQ') cycleGun();                        // Q cycles your owned small arms while ashore
+  if(e.code==='KeyX') deleteTurret(); });                // X scraps the deck gun you're standing next to
 addEventListener('keyup',e=>{ keys[e.code]=0; });
 
 // =====================================================================
@@ -983,7 +985,7 @@ function buildMenu(){
       <div class="stats">
         <div class="row"><span>Hull</span>${bar(s.hp,700)}</div>
         <div class="row"><span>Size</span>${bar(s.len,100)}</div>
-        <div class="row"><span>Mounts</span>${bar(s.mounts,10)}</div>
+        <div class="row"><span>Mounts</span>${bar(s.mounts,20)}</div>
       </div>`;
     div.onclick=()=>chooseShip(id);
     wrap.appendChild(div);
@@ -1570,6 +1572,15 @@ function nearestTurret(){
   let best=null,bd=5;
   placed.forEach(pl=>{ const d=flatDL(pl.group.position); if(d<bd){bd=d;best=pl;} });
   return best;
+}
+function deleteTurret(){   // X next to a deck gun scraps it for a half refund
+  if(phase!=='play'||onFoot||driving||piloting||drivingTank||shopOpen||harborOpen||buildOpen) return;
+  const pl=nearestTurret(); if(!pl){ flashPrompt('Stand next to a deck gun, then X to scrap it'); return; }
+  if(manning===pl) manning=null;
+  if(pl.group.parent) pl.group.parent.remove(pl.group);
+  const i=placed.indexOf(pl); if(i>=0) placed.splice(i,1);
+  const refund=Math.round(priceOf(pl.def.cost)*0.5); money+=refund;
+  refreshShop(); updateHUD(); sfxClick(); flashPrompt('Scrapped '+pl.def.name+' (+$'+refund+')'); updateMode();
 }
 function nearestHelm(){ return (player.helm && flatDL(player.helm)<4.5) ? player.helm : null; }
 function tryPlace(){
@@ -2559,7 +2570,7 @@ function updatePrompt(){
     if(hm) msg='Press E to take the helm (steer the ship)';
     else if(dtk) msg='Press E to crew the '+dtk.name;
     else if(alongside) msg='Press G to go ashore';
-    else if(tu) msg='Press E to man '+tu.def.name;
+    else if(tu) msg='Press E to man '+tu.def.name+'   ·   X to scrap it';
     else if(pa) msg='Press E to fly the '+pa.def.name+'   ·   A to send it up under AI';
     else if(placed.length>=player.def.mounts) msg='Gun limit reached ('+placed.length+'/'+player.def.mounts+') — a bigger ship mounts more';
     else msg= selectedWeapon? 'Press F to install '+WEAPONS[selectedWeapon].name+' ($'+priceOf(WEAPONS[selectedWeapon].cost)+')  ['+placed.length+'/'+player.def.mounts+' guns]   ·   H: harbor upgrades' : 'Pick a weapon in the Armory (Tab) · H for harbor upgrades';
