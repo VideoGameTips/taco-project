@@ -42,6 +42,8 @@
     background:rgba(10,20,32,.7);padding:8px 16px;border-radius:8px;border:1px solid #2a4660;display:none;}
   #mode{position:absolute;right:22px;bottom:20px;font-size:12px;color:#7e93a8;text-align:right;line-height:1.7;}
   #mode b{color:#cfe6fb;}
+  #minimap{position:absolute;top:64px;right:18px;width:172px;height:172px;border-radius:50%;
+    border:1px solid #2a4660;background:rgba(8,16,24,.35);box-shadow:0 0 14px rgba(0,0,0,.4);}
 
   /* ---- Shop ---- */
   #shop{position:fixed;top:0;right:0;bottom:0;width:300px;z-index:15;background:rgba(9,16,24,.94);
@@ -108,6 +110,7 @@
   <div id="shiphpwrap"><div class="lab">HULL INTEGRITY</div><div id="shiphp"><i></i></div></div>
   <div id="prompt"></div>
   <div id="mode"></div>
+  <canvas id="minimap" width="172" height="172"></canvas>
 </div>
 
 <!-- SHOP -->
@@ -214,8 +217,22 @@ const PLANES = {
   // ---- WWII prop ----
   p51:  { name:'P-51 Mustang', cost:950, hp:70,  speed:62, maxSpeed:108, turn:1.9, col:0xb9bec6, shape:'prop',
           guns:{dmg:8,spd:200,cd:0.06,kind:'gun',col:0xffe070}, desc:'Fast prop fighter — six .50 cals, superb dogfighter.' },
+  spitfire:{ name:'Supermarine Spitfire', cost:920, hp:66, speed:60, maxSpeed:106, turn:2.1, col:0x6b7a64, shape:'prop',
+          guns:{dmg:7,spd:200,cd:0.055,kind:'gun',col:0xffe070}, desc:'Iconic RAF interceptor — tight-turning dogfighter.' },
+  bf109:{ name:'Messerschmitt Bf 109', cost:900, hp:64, speed:62, maxSpeed:110, turn:1.95, col:0x586a54, shape:'prop',
+          guns:{dmg:9,spd:205,cd:0.07,kind:'gun',col:0xffe070}, desc:'Luftwaffe workhorse — fast with a hard-hitting nose cannon.' },
+  zero: { name:'Mitsubishi A6M Zero', cost:880, hp:56, speed:60, maxSpeed:104, turn:2.35, col:0x8a8a5a, shape:'prop',
+          guns:{dmg:7,spd:195,cd:0.06,kind:'gun',col:0xffe070}, desc:'Featherweight carrier fighter — astonishing turn rate, thin armor.' },
+  p38: { name:'P-38 Lightning', cost:1250, hp:96, speed:60, maxSpeed:114, turn:1.5, col:0x9aa0a8, shape:'attack',
+          guns:{dmg:11,spd:210,cd:0.06,kind:'gun',col:0xffd040}, bomb:{dmg:52,splash:7,kind:'bomb',col:0x9aa0a8}, bombs:4, desc:'Twin-boom heavy fighter — concentrated nose guns + bombs.' },
+  stuka:{ name:'Ju 87 Stuka', cost:1150, hp:84, speed:46, maxSpeed:74, turn:1.25, col:0x5a5240, shape:'prop',
+          guns:{dmg:5,spd:170,cd:0.12,kind:'gun',col:0xffe070}, bomb:{dmg:90,splash:9,kind:'bomb',col:0x4a4438}, bombs:4, desc:'Screaming dive bomber — pinpoint single heavy bomb.' },
+  corsair:{ name:'F4U Corsair', cost:1050, hp:90, speed:58, maxSpeed:106, turn:1.7, col:0x40506a, shape:'prop',
+          guns:{dmg:9,spd:205,cd:0.05,kind:'gun',col:0xffd040}, bomb:{dmg:48,splash:7,kind:'bomb',col:0x36405a}, bombs:3, desc:'Bent-wing naval fighter-bomber — guns + bombs.' },
   b17:  { name:'B-17 Flying Fortress', cost:2100, hp:170, speed:46, maxSpeed:76, turn:0.85, col:0x9aa0a8, shape:'prop', scale:1.5,
           guns:{dmg:5,spd:175,cd:0.1,kind:'gun',col:0xffe070}, bomb:{dmg:80,splash:11,kind:'bomb',col:0x9aa0a8}, bombs:16, desc:'WWII heavy bomber — bristling defensive guns, huge bomb load.' },
+  lancaster:{ name:'Avro Lancaster', cost:2300, hp:165, speed:44, maxSpeed:74, turn:0.8, col:0x4a4e44, shape:'prop', scale:1.55,
+          guns:{dmg:5,spd:175,cd:0.11,kind:'gun',col:0xffe070}, bomb:{dmg:120,splash:14,kind:'bomb',col:0x3a3e34}, bombs:14, desc:'RAF night bomber — carries the heaviest blockbuster payloads.' },
   // ---- modern jets ----
   f16:  { name:'F-16 Fighting Falcon', cost:1700, hp:80, speed:84, maxSpeed:148, turn:2.05, col:0xa2a8b0, shape:'jet',
           guns:{dmg:6,spd:230,cd:0.06,kind:'gun',col:0xffe070}, bomb:{dmg:58,splash:6,kind:'missile',homing:true,spd:125,col:0xd0d6de,range:250}, bombs:5, desc:'Agile multirole jet. Vulcan cannon + homing missiles.' },
@@ -225,9 +242,23 @@ const PLANES = {
   uh60: { name:'UH-60 Black Hawk', cost:1150, hp:120, speed:0, maxSpeed:66, turn:2.2, climb:20, col:0x3c443a, shape:'heli', heli:true,
           guns:{dmg:6,spd:190,cd:0.05,kind:'gun',col:0xffd040}, desc:'Utility transport helo — tough airframe, twin door guns.' },
 };
+// Handheld small arms — carried when you go ashore (G). Buy in the shop, switch with Q. gfx = viewmodel silhouette.
+const HANDHELD = {
+  pistol:  { name:'M1911 Pistol',   cost:0,    dmg:13, cd:0.30, spd:185, spread:0.02, gfx:'pistol',  col:0xffe070, desc:'Standard issue sidearm.' },
+  deagle:  { name:'Desert Eagle',   cost:350,  dmg:38, cd:0.5,  spd:210, spread:0.015,gfx:'pistol',  col:0xffd040, desc:'.50 hand cannon — huge punch, slow.' },
+  mp5:     { name:'MP5 SMG',        cost:450,  dmg:11, cd:0.07, spd:180, spread:0.06, gfx:'smg',     col:0xffe070, desc:'High rate of fire, close range.' },
+  ak47:    { name:'AK-47',          cost:650,  dmg:17, cd:0.10, spd:195, spread:0.05, gfx:'rifle',   col:0xffd040, desc:'Full-auto assault rifle — rugged and hard-hitting.' },
+  m16:     { name:'M16',            cost:700,  dmg:15, cd:0.09, spd:205, spread:0.035,gfx:'rifle',   col:0xffe070, desc:'Accurate full-auto rifle.' },
+  shotgun: { name:'Combat Shotgun', cost:600,  dmg:9,  cd:0.7,  spd:165, spread:0.13, pellets:8, gfx:'shotgun', col:0xffd040, desc:'8-pellet spread — devastating up close.' },
+  sniper:  { name:'Sniper Rifle',   cost:950,  dmg:95, cd:1.3,  spd:320, spread:0.0,  gfx:'sniper',  col:0xfff0a0, desc:'One-shot precision at long range.' },
+  lmg:     { name:'M249 LMG',       cost:1100, dmg:14, cd:0.06, spd:200, spread:0.07, gfx:'lmg',     col:0xffd040, desc:'Belt-fed suppressive fire.' },
+  rpg:     { name:'RPG-7',          cost:1300, dmg:85, cd:1.9,  spd:135, splash:6,  gfx:'rpg',     col:0xff8030, desc:'Rocket launcher — explosive splash.' },
+};
+let equippedGun='pistol';
+const ownedGuns=new Set(['pistol']);   // the pistol is always on hand
 
 // ---------- three setup ----------
-let renderer, scene, camera, clock, sun;
+let renderer, scene, camera, clock, sun, hemi;
 const SILVER = c=>new THREE.MeshStandardMaterial({ color:c||0xc2c6cc, metalness:0.72, roughness:0.42 });
 function mkBox(w,h,d,m){ const x=new THREE.Mesh(new THREE.BoxGeometry(w,h,d), m.isMaterial?m:SILVER(m)); x.castShadow=x.receiveShadow=true; return x; }
 function mkCyl(rt,rb,h,m,seg=14){ const x=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg), m.isMaterial?m:SILVER(m)); x.castShadow=true; return x; }
@@ -241,8 +272,9 @@ function initThree(){
   scene.background=new THREE.Color(0x9fb8cc);
   scene.fog=new THREE.Fog(0x9fb8cc, 900, 9000);
   camera=new THREE.PerspectiveCamera(72, innerWidth/innerHeight, 0.1, 20000);
+  scene.add(camera);   // so the first-person weapon viewmodel (parented to the camera) renders
   clock=new THREE.Clock();
-  scene.add(new THREE.HemisphereLight(0xcfe2f5, 0x33414f, 0.9));
+  hemi=new THREE.HemisphereLight(0xcfe2f5, 0x33414f, 0.9); scene.add(hemi);
   sun=new THREE.DirectionalLight(0xfff4e0, 1.15); sun.position.set(120,180,80);
   scene.add(sun); scene.add(sun.target);
   // ocean
@@ -255,10 +287,42 @@ function initThree(){
 const baseW=[];
 function initWaterBase(){ const p=waterGeo.attributes.position; for(let i=0;i<p.count;i++) baseW.push([p.getX(i),p.getZ(i)]); }
 function animateWater(t){
-  const p=waterGeo.attributes.position;
+  const p=waterGeo.attributes.position, sea=weather.sea;
   for(let i=0;i<p.count;i++){ const x=baseW[i][0],z=baseW[i][1];
-    p.setY(i, Math.sin(x*0.03+t*0.9)*0.6 + Math.cos(z*0.04+t*1.1)*0.5); }
+    p.setY(i, (Math.sin(x*0.03+t*0.9)*0.6 + Math.cos(z*0.04+t*1.1)*0.5)*sea); }
   p.needsUpdate=true;
+}
+
+// =====================================================================
+//  WEATHER & DAY/NIGHT — procedural sky, sun, fog, sea state
+// =====================================================================
+let weather={ tod:0.32, type:'clear', t:50, sea:1, day:1 };
+const _skyDay=new THREE.Color(0x9fb8cc), _skyNight=new THREE.Color(0x0a1622), _skyDusk=new THREE.Color(0xc77a4a);
+const _gray=new THREE.Color(0x39424c), _foggy=new THREE.Color(0x8a929a);
+const WTYPES={ clear:{dark:1,far:9000,sea:1}, overcast:{dark:0.82,far:5200,sea:1.4}, fog:{dark:0.72,far:1700,sea:1.1}, storm:{dark:0.55,far:2300,sea:2.4} };
+function weatherVis(){ const w=WTYPES[weather.type]||WTYPES.clear; return Math.max(0.4, w.dark) * (0.55+0.45*weather.day); }   // sensor/visibility multiplier
+function updateWeather(dt){
+  weather.tod=(weather.tod+dt/360)%1;                    // full day ≈ 6 minutes
+  weather.t-=dt;
+  if(weather.t<=0){ weather.t=55+Math.random()*85;
+    const r=Math.random(); weather.type = r<0.5?'clear':r<0.72?'overcast':r<0.88?'fog':'storm';
+    if(phase==='play') flashPrompt('⛅ Weather: '+weather.type.toUpperCase()); }
+  const W=WTYPES[weather.type]||WTYPES.clear;
+  weather.sea += (W.sea-weather.sea)*Math.min(1,dt*0.4);  // sea state eases in
+  const day=(Math.sin(weather.tod*6.2832-1.5708)+1)/2;    // 0 midnight … 1 noon
+  weather.day=day;
+  const dusk=Math.pow(1-Math.abs(day-0.5)*2, 3)*(day<0.55?1:0.4); // warm tint near dawn/dusk
+  if(!scene) return;
+  // sky / fog colour
+  const sky=_skyNight.clone().lerp(_skyDay, day);
+  sky.lerp(_skyDusk, dusk*0.5);
+  if(weather.type==='storm') sky.lerp(_gray,0.55); else if(weather.type==='fog') sky.lerp(_foggy,0.5); else if(weather.type==='overcast') sky.lerp(_gray,0.3);
+  scene.background.copy(sky); scene.fog.color.copy(sky);
+  scene.fog.far = W.far*(0.45+0.55*day); scene.fog.near = Math.min(800, scene.fog.far*0.25);
+  // lights
+  const bright=day*W.dark;
+  if(sun){ sun.intensity=0.28+0.95*bright; sun.color.setRGB(1, 0.92-dusk*0.25, 0.85-dusk*0.45); }
+  if(hemi) hemi.intensity=0.32+0.6*Math.max(bright,day*0.4);   // keep night moody but still playable
 }
 
 // =====================================================================
@@ -781,6 +845,49 @@ function buildSailor(role){
   return g;
 }
 
+// ---------- handheld weapon viewmodel (first-person, parented to the camera) ----------
+let viewGun=null, viewGunId=null, gunKick=0;
+function buildGunModel(gfx){
+  const g=new THREE.Group();
+  const body=new THREE.MeshStandardMaterial({color:0x2b2f36,roughness:0.7,metalness:0.3});
+  const metal=new THREE.MeshStandardMaterial({color:0x6a7078,roughness:0.5,metalness:0.6});
+  const wood=new THREE.MeshStandardMaterial({color:0x6b4a2a,roughness:0.8});
+  const bx=(w,h,d,m,x,y,z)=>{ const e=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m||body); e.position.set(x,y,z); g.add(e); return e; };
+  const cy=(r,h,m,x,y,z)=>{ const e=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,10),m||metal); e.rotation.x=Math.PI/2; e.position.set(x,y,z); g.add(e); return e; };
+  if(gfx==='pistol'){ bx(0.07,0.1,0.26,body,0,0,-0.1); bx(0.06,0.16,0.07,body,0,-0.12,0.02); cy(0.022,0.18,metal,0,0.01,-0.24); }
+  else if(gfx==='smg'){ bx(0.08,0.12,0.42,body,0,0,-0.18); bx(0.05,0.18,0.06,body,0,-0.13,-0.02); bx(0.04,0.16,0.1,metal,0,-0.16,-0.16); cy(0.02,0.2,metal,0,0.02,-0.42); }
+  else if(gfx==='rifle'){ bx(0.08,0.12,0.62,body,0,0,-0.26); bx(0.05,0.2,0.08,metal,0,-0.16,-0.18); bx(0.06,0.14,0.16,wood,0,-0.02,0.12); cy(0.022,0.3,metal,0,0.02,-0.62); }
+  else if(gfx==='shotgun'){ bx(0.09,0.12,0.6,body,0,0,-0.26); bx(0.06,0.14,0.18,wood,0,-0.02,0.12); cy(0.03,0.36,metal,0,0.03,-0.6); cy(0.03,0.34,metal,0,-0.02,-0.58); }
+  else if(gfx==='sniper'){ bx(0.07,0.11,0.78,body,0,0,-0.32); bx(0.06,0.14,0.2,wood,0,-0.02,0.14); cy(0.018,0.46,metal,0,0.02,-0.8); bx(0.05,0.05,0.18,metal,0,0.12,-0.18); }
+  else if(gfx==='lmg'){ bx(0.1,0.14,0.66,body,0,0,-0.28); bx(0.12,0.16,0.16,metal,0,-0.14,-0.06); cy(0.026,0.36,metal,0,0.03,-0.66); bx(0.02,0.18,0.02,metal,0.05,-0.2,-0.5); bx(0.02,0.18,0.02,metal,-0.05,-0.2,-0.5); }
+  else if(gfx==='rpg'){ cy(0.06,0.8,body,0,0,-0.3); const w=new THREE.Mesh(new THREE.ConeGeometry(0.09,0.2,10),new THREE.MeshStandardMaterial({color:0x556070,roughness:0.6})); w.rotation.x=-Math.PI/2; w.position.set(0,0,-0.72); g.add(w); bx(0.04,0.14,0.06,wood,0,-0.12,0.0); }
+  else { bx(0.07,0.1,0.3,body,0,0,-0.12); }
+  g.scale.setScalar(1.1);
+  return g;
+}
+function refreshViewGun(){ if(viewGun){ camera.remove(viewGun); viewGun=null; } if(!camera) return; viewGun=buildGunModel((HANDHELD[equippedGun]||HANDHELD.pistol).gfx); camera.add(viewGun); viewGunId=equippedGun; }
+function updateViewGun(dt){
+  if(onFoot){ if(!viewGun||viewGunId!==equippedGun) refreshViewGun();
+    if(viewGun){ viewGun.visible=true; gunKick=Math.max(0,gunKick-dt*6);
+      viewGun.position.set(0.34,-0.27,-0.7+gunKick*0.14); viewGun.rotation.set(gunKick*0.3,0,0); } }
+  else if(viewGun) viewGun.visible=false;
+}
+function equipGun(id){ equippedGun=id; ownedGuns.add(id); refreshViewGun(); flashPrompt('Equipped '+HANDHELD[id].name); }
+function buyGun(id){ const W=HANDHELD[id];
+  if(ownedGuns.has(id)){ equipGun(id); sfxClick(); buildShopUI(); return; }
+  const cost=priceOf(W.cost); if(money<cost){ flashPrompt('Not enough funds'); return; }
+  money-=cost; ownedGuns.add(id); equipGun(id); sfxClick(); buildShopUI(); updateHUD();
+}
+function cycleGun(){ if(!onFoot) return; const owned=Object.keys(HANDHELD).filter(k=>ownedGuns.has(k));
+  if(owned.length<2) return; const i=owned.indexOf(equippedGun); equipGun(owned[(i+1)%owned.length]); }
+// tiny SVG silhouette for the shop list
+function gunIcon(gfx){ const c='#cfe6fb';
+  const P={ pistol:'M2 7h14v3h-3v4h-3v-4H2z', smg:'M2 6h20v4h-4v3h-3v-3H2z', rifle:'M1 7h26v3h-4v3h-3v-3H1z',
+    shotgun:'M1 7h26v3H1z M3 10h3v3H3z', sniper:'M1 7h28v2H1z M18 4h5v2h-5z', lmg:'M1 6h24v5h-6v3h-3v-3H1z M5 11h5v3H5z',
+    rpg:'M1 7h24l4-2v6l-4-2H1z' }[gfx]||'M2 7h16v3H2z';
+  return `<svg width="30" height="16" viewBox="0 0 30 16" style="vertical-align:middle;margin-right:6px"><path d="${P}" fill="${c}"/></svg>`;
+}
+
 // =====================================================================
 //  STATE
 // =====================================================================
@@ -859,7 +966,8 @@ addEventListener('keydown',e=>{ keys[e.code]=1; if(e.code==='Tab'){ e.preventDef
   if(e.code==='KeyF') tryPlace(); if(e.code==='KeyE') toggleMan(); if(e.code==='KeyG') toggleFoot();
   if(e.code==='KeyH') toggleHarbor(); if(e.code==='KeyM') sfxToggle(); if(e.code==='KeyC') toggleDive();
   if(e.code==='KeyB') toggleBuild();
-  if(e.code==='KeyA' && !e.repeat) tryDispatchPlane(); });   // A next to a parked plane → AI pilot (single press, won't fire while held to walk)
+  if(e.code==='KeyA' && !e.repeat) tryDispatchPlane();   // A next to a parked plane → AI pilot (single press, won't fire while held to walk)
+  if(e.code==='KeyQ') cycleGun(); });                    // Q cycles your owned small arms while ashore
 addEventListener('keyup',e=>{ keys[e.code]=0; });
 
 // =====================================================================
@@ -1173,7 +1281,7 @@ function reticleAim(muzzle, range, assist){
   // use the camera's REAL look direction (matches the centre crosshair exactly across all view modes)
   const fwd=camera.getWorldDirection(new THREE.Vector3());
   const eye=camera.position;
-  const lock = (range+fleetRange()) * (player.crit&&player.crit.radar?0.55:1);   // radar tower extends, radar damage shortens
+  const lock = (range+fleetRange()) * (player.crit&&player.crit.radar?0.55:1) * Math.max(0.5,weatherVis());   // radar tower extends; radar damage, fog & night shorten
   if(assist){ const t=trackEnemy(eye, fwd, lock); if(t) return t.clone(); }
   return eye.clone().add(fwd.multiplyScalar(range));   // no lock → just converge on the crosshair line
 }
@@ -1307,6 +1415,29 @@ function buildShopUI(){
     d.onclick=()=>buyTank(id);
     list.appendChild(d);
   });
+  // --- Small Arms (carried ashore; press G to land, Q to switch) ---
+  const ahdr=document.createElement('h2'); ahdr.textContent='SMALL ARMS'; ahdr.style.marginTop='14px'; list.appendChild(ahdr);
+  const asub=document.createElement('div'); asub.className='hint'; asub.textContent='Carried when you go ashore (G). Buy to equip · Q to switch in the field.'; list.appendChild(asub);
+  Object.keys(HANDHELD).forEach(id=>{
+    const W=HANDHELD[id], owned=ownedGuns.has(id);
+    const d=document.createElement('div'); d.className='witem gun'; d.dataset.gun=id;
+    const tag = id===equippedGun ? 'EQUIPPED' : owned ? 'OWNED' : (W.cost?('$'+priceOf(W.cost)):'FREE');
+    d.innerHTML=`<div class="wn"><span>${gunIcon(W.gfx)}${W.name}</span><span class="wc">${tag}</span></div>
+      <div class="wd">${W.dmg} dmg · ${(1/W.cd).toFixed(1)}/s${W.pellets?' · '+W.pellets+' pellets':''}${W.splash?' · splash':''}</div>`;
+    d.onclick=()=>buyGun(id);
+    list.appendChild(d);
+  });
+  // --- Island Defenses (built where you stand after going ashore with G) ---
+  const ihdr=document.createElement('h2'); ihdr.textContent='ISLAND DEFENSES'; ihdr.style.marginTop='14px'; list.appendChild(ihdr);
+  const isub=document.createElement('div'); isub.className='hint'; isub.textContent='Go ashore (G), then click to emplace it where you stand. Also on the B menu.'; list.appendChild(isub);
+  Object.keys(STRUCTS).forEach(k=>{
+    const s=STRUCTS[k];
+    const d=document.createElement('div'); d.className='witem struct'; d.dataset.struct=k;
+    d.innerHTML=`<div class="wn"><span>🏗️ ${s.name}</span><span class="wc">$${priceOf(s.cost)}</span></div>
+      <div class="wd">${s.desc}</div>`;
+    d.onclick=()=>buildStructure(k);
+    list.appendChild(d);
+  });
   refreshShop();
 }
 function describe(w){
@@ -1315,6 +1446,10 @@ function describe(w){
 }
 function refreshShop(){
   document.querySelectorAll('.witem').forEach(el=>{
+    if(el.dataset.gun){ const id=el.dataset.gun, owned=ownedGuns.has(id);
+      el.classList.toggle('sel', id===equippedGun);
+      el.classList.toggle('poor', !owned && money<priceOf(HANDHELD[id].cost)); return; }
+    if(el.dataset.struct){ el.classList.toggle('poor', money<priceOf(STRUCTS[el.dataset.struct].cost)); return; }
     const w = el.dataset.plane ? PLANES[el.dataset.plane] : el.dataset.tank ? TANKS[el.dataset.tank] : WEAPONS[el.dataset.id];
     if(!el.dataset.plane && !el.dataset.tank) el.classList.toggle('sel', selectedWeapon===el.dataset.id);
     el.classList.toggle('poor', money<priceOf(w.cost));
@@ -1399,7 +1534,8 @@ function toggleBuild(){
   updateMode();
 }
 function buildStructure(k){
-  if(!onFoot) return; const s=STRUCTS[k], cost=priceOf(s.cost);
+  if(!onFoot){ flashPrompt('Go ashore on an island (G) to emplace '+STRUCTS[k].name); return; }
+  const s=STRUCTS[k], cost=priceOf(s.cost);
   if(money<cost){ flashPrompt('Not enough funds'); return; }
   // emplace a few metres in front of where you stand, on the island ground
   const fwd=new THREE.Vector3(Math.sin(camYaw.v),0,Math.cos(camYaw.v));
@@ -1408,7 +1544,7 @@ function buildStructure(k){
   if(footLand){ const dx=p.x-footLand.pos.x, dz=p.z-footLand.pos.z, dd=Math.hypot(dx,dz), lim=footLand.r*0.9;
     if(dd>lim){ p.x=footLand.pos.x+dx/dd*lim; p.z=footLand.pos.z+dz/dd*lim; } }
   money-=cost; buildAndPushLand(k, 0, p, ground);
-  refreshBuild(); updateHUD(); sfxClick(); flashPrompt(s.name+' built — it will defend the island');
+  refreshBuild(); refreshShop(); updateHUD(); sfxClick(); flashPrompt(s.name+' built — it will defend the island');
 }
 // the enemy fortifies its own islands over time
 let _islandBuildT=18;
@@ -1526,7 +1662,7 @@ function flyPlane(pa){
   const wp=pa.group.getWorldPosition(new THREE.Vector3());
   scene.attach(pa.group);                          // detach to world, keep transform
   piloting={ plane:pa, pos:wp.clone(), speed:pa.def.speed*0.35, gunCd:0, bombCd:0, roll:0, lastYaw:player.heading||0, phase:'takeoff', taxiT:0, hp:pa.def.hp, maxhp:pa.def.hp,
-    fuel:100, fuelMax:100, engineOn:true, gLoad:0, stallT:0 };
+    fuel:200, fuelMax:200, engineOn:true, gLoad:0, stallT:0 };   // doubled endurance
   pa.parked=false; camYaw.v=player.heading||0; camPitch.v=0.05;
   const cv=document.getElementById('c'); if(document.pointerLockElement!==cv) cv.requestPointerLock();
   flashPrompt('Takeoff roll…'); updateMode();
@@ -1818,7 +1954,7 @@ function tickCrit(s,dt){
 }
 // a crippled engine still crawls (never a dead stop) so you can always limp to safety / the repair dock
 function engineFactor(s){ const c=s.crit; return !c?1 : c.engine>=2?0.2 : c.engine>=1?0.5 : 1; }
-function radarFactor(s){ return (s.crit&&s.crit.radar)?0.6:1; }
+function radarFactor(s){ return ((s.crit&&s.crit.radar)?0.6:1) * weatherVis(); }   // radar damage + fog/storm/night all shorten engagement range
 function fireFx(s,dt){ if(Math.random()<dt*9){ const base=(s===player?player.pos:s.pos);
   const p=base.clone().setY((s.def.deckY||3)+1+Math.random()*2).add(new THREE.Vector3((Math.random()-0.5)*s.def.beam,0,(Math.random()-0.5)*s.def.len*0.5));
   const sm=new THREE.Mesh(new THREE.SphereGeometry(0.6+Math.random()*0.6,6,6), new THREE.MeshBasicMaterial({color:Math.random()<0.5?0xff6a20:0x2a2a2a,transparent:true,opacity:0.7}));
@@ -1843,6 +1979,7 @@ function blastAll(pos,dmg,rad){
 // =====================================================================
 function update(dt,t){
   animateWater(t);
+  updateWeather(dt);
   // --- controls ---
   if(driving){ updateDrive(dt); }
   if(piloting){ updatePilot(dt); }
@@ -1851,6 +1988,7 @@ function update(dt,t){
   else if(onFoot){ updateFoot(dt); }
   else if(!driving){ updateWalk(dt); }
   if(player.def.kind==='sub') updateSub(dt);
+  updateViewGun(dt);
   player.vel=new THREE.Vector3(Math.sin(player.heading)*(player.speed||0),0,Math.cos(player.heading)*(player.speed||0));
   if(piloting && piloting.phase==='fly'){ const ph=piloting.heading||0, ps=piloting.speed||0; piloting.vel=new THREE.Vector3(Math.sin(ph)*ps,0,Math.cos(ph)*ps); }
   sfxEngine();
@@ -1936,14 +2074,20 @@ function updateFoot(dt){
   const o=footLand, dx=footPos.x-o.pos.x, dz=footPos.z-o.pos.z, d=Math.hypot(dx,dz), lim=o.r*0.92;
   if(d>lim){ footPos.x=o.pos.x+dx/d*lim; footPos.z=o.pos.z+dz/d*lim; }
   footPos.y=o.top+EYE;
-  // handheld weapon — left-click to fire your rifle
+  // handheld weapon — fire the currently equipped small arm
   if(footGunCd>0) footGunCd-=dt;
-  if(mouseDownFire && footGunCd<=0){ footGunCd=0.12;
+  const W=HANDHELD[equippedGun]||HANDHELD.pistol;
+  if(mouseDownFire && footGunCd<=0){ footGunCd=W.cd;
     const yaw=camYaw.v, pitch=camPitch.v;
     const fwd=new THREE.Vector3(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch));
     const muz=footPos.clone().add(fwd.clone().multiplyScalar(1.2)).add(new THREE.Vector3(0,-0.25,0));
-    const dir=reticleAim(muz, 420, true).sub(muz).normalize();   // rifle converges onto the reticle / nearby enemy
-    spawnShell({dmg:14,spd:185,kind:'gun',col:0xffe070}, muz, dir, 0, null);
+    const aim=reticleAim(muz, W.spd*2.4, true);
+    const shells=W.pellets||1;
+    for(let i=0;i<shells;i++){ const dir=aim.clone().sub(muz).normalize();
+      if(W.spread){ dir.x+=(Math.random()-0.5)*W.spread; dir.y+=(Math.random()-0.5)*W.spread; dir.z+=(Math.random()-0.5)*W.spread; dir.normalize(); }
+      spawnShell({dmg:W.dmg, spd:W.spd, kind:'gun', splash:W.splash||0, col:W.col}, muz.clone(), dir, 0, null);
+    }
+    muzzleFlash(muz); gunKick=1;   // viewmodel recoil
   }
 }
 function updateWalk(dt){
@@ -2111,7 +2255,7 @@ function autoGun(pl,dt){
 }
 
 // ---------- AI aircraft (both sides) — each plane type fights its own way ----------
-const AI_PLANE_POOL=['fighter','divebomber','torpbomber','f18','a10','f22','b2','f35','p51','b17','f16','b52']; // no helos for the AI
+const AI_PLANE_POOL=['fighter','divebomber','torpbomber','f18','a10','f22','b2','f35','p51','b17','f16','b52','spitfire','bf109','zero','stuka','p38','corsair']; // no helos for the AI
 function planeProfile(def){ const b=def.bomb;
   return { torp: !!(b&&b.kind==='torpedo'), miss: !!(b&&b.homing), bomber: !!(b&&b.kind!=='torpedo'&&!b.homing), fighter: !b }; }
 function spawnAIPlane(src, team, forceDef){
@@ -2400,13 +2544,13 @@ function updatePrompt(){
   if(promptT>0){ promptT-=0.016; msg=promptMsg; }
   else if(drivingTank){ msg='Tank — W/S drive · A/D turn · Mouse aim · Click fire   ·   E to dismount'; }
   else if(onFoot){ const near=Math.hypot(footPos.x-player.pos.x,footPos.z-player.pos.z)<player.build.halfLen+18;
-    msg='Ashore — WASD walk · Click rifle · B build defenses' + (near?'   ·   G re-board ship':''); }
+    msg='Ashore — WASD walk · Click: '+(HANDHELD[equippedGun]||HANDHELD.pistol).name+' · Q switch · B build' + (near?'   ·   G re-board':''); }
   else if(driving){ msg='Steering — W/S throttle · A/D rudder' + (player.def.kind==='sub'?'   ·   C dive/surface':'') + '   ·   E to step away'; }
   else if(piloting){
     if(piloting.phase==='takeoff') msg='Taking off…';
     else if(piloting.phase==='landing') msg='Landing — line up OVER the ship and descend · E to abort';
     else { const heli=piloting.plane.def.heli; const b=piloting.plane.def.bomb?`   ·   Space drop (${piloting.plane.bombsLeft})`:'';
-      const f=Math.ceil(piloting.fuel); const eng = !piloting.engineOn ? '   ·   ⚠ ENGINE OUT' : (f<25?'   ·   ⚠ LOW FUEL':'');
+      const f=Math.ceil(piloting.fuel/piloting.fuelMax*100); const eng = !piloting.engineOn ? '   ·   ⚠ ENGINE OUT' : (f<25?'   ·   ⚠ LOW FUEL':'');
       msg=(heli?'W/S fwd · A/D turn · Mouse = climb/descend':'W/S throttle · A/D turn · Mouse = pitch')+' · Click guns'+b+`   ·   Fuel ${f}%`+eng+'   ·   E to land'; }
   }
   else if(!manning && !shopOpen && !harborOpen){
@@ -2437,10 +2581,44 @@ function critStatus(){
 }
 function updateHUD(){
   document.getElementById('money').textContent='$'+money;
-  document.getElementById('score').textContent='Sunk: '+sunk+'   ·   Guns '+placed.filter(p=>!p.ko).length+'/'+player.def.mounts+critStatus();
+  const wg = weather.type==='storm'?'⛈️':weather.type==='fog'?'🌫️':weather.type==='overcast'?'☁️':(weather.day<0.32?'🌙':'☀️');
+  document.getElementById('score').textContent=wg+'  Sunk: '+sunk+'   ·   Guns '+placed.filter(p=>!p.ko).length+'/'+player.def.mounts+critStatus();
   document.querySelector('#shiphp>i').style.width=(player.hp/player.maxhp*100)+'%';
   if(enemyHarbor){ document.getElementById('ehp').textContent=Math.ceil(enemyHarbor.hp/enemyHarbor.maxhp*100)+'%'; }
   if(friendlyHarbor){ document.getElementById('fhp').textContent=Math.ceil(friendlyHarbor.hp/friendlyHarbor.maxhp*100)+'%'; }
+  drawMinimap();
+}
+// ---------- tactical minimap: top-down radar, player-centred ----------
+function drawMinimap(){
+  const cv=document.getElementById('minimap'); if(!cv||!player||!player.pos) return;
+  const g=cv.getContext('2d'), S=cv.width, R=S/2;
+  const range=1700, sc=R/range, px=player.pos.x, pz=player.pos.z;
+  const det=620+fleetRange();                                   // how far you can see enemies (radar upgrade extends it)
+  const vis=(typeof weatherVis==='function')?weatherVis():1;    // fog/storm shrink your sensors
+  const detR=det*vis;
+  const to=(x,z)=>[R+(x-px)*sc, R+(z-pz)*sc];
+  const inR=(x,z)=>((x-px)*(x-px)+(z-pz)*(z-pz))<range*range;
+  const dot=(x,y,r)=>{ g.beginPath(); g.arc(x,y,r,0,6.2832); g.fill(); };
+  g.clearRect(0,0,S,S);
+  g.save(); g.beginPath(); g.arc(R,R,R-1,0,6.2832); g.clip();   // round mask
+  g.fillStyle='rgba(10,22,32,0.55)'; g.fillRect(0,0,S,S);
+  // islands
+  g.fillStyle='rgba(110,140,100,0.55)';
+  islands.forEach(i=>{ if(!inR(i.pos.x,i.pos.z))return; const [mx,my]=to(i.pos.x,i.pos.z); dot(mx,my,Math.max(1.5,i.r*sc)); });
+  // harbors (squares)
+  [[friendlyHarbor,'#39d0ff'],[enemyHarbor,'#ff5a5a']].forEach(p=>{ const h=p[0]; if(!h||h.hp<=0||!inR(h.pos.x,h.pos.z))return;
+    const [mx,my]=to(h.pos.x,h.pos.z); g.fillStyle=p[1]; g.fillRect(mx-3.5,my-3.5,7,7); });
+  // allies (always visible) + enemies (within sensor range)
+  g.fillStyle='#39d0ff'; allies.forEach(a=>{ if(a.sinkT>0||!inR(a.pos.x,a.pos.z))return; const [mx,my]=to(a.pos.x,a.pos.z); dot(mx,my,2.3); });
+  g.fillStyle='#ff3b3b'; enemies.forEach(e=>{ if(e.sinkT>0||!inR(e.pos.x,e.pos.z))return; if(((e.pos.x-px)**2+(e.pos.z-pz)**2)>detR*detR)return; const [mx,my]=to(e.pos.x,e.pos.z); dot(mx,my,2.3); });
+  aiPlanes.forEach(p=>{ if(p.hp<=0||!inR(p.pos.x,p.pos.z))return; if(p.team===1 && ((p.pos.x-px)**2+(p.pos.z-pz)**2)>detR*detR)return;
+    const [mx,my]=to(p.pos.x,p.pos.z); g.fillStyle=p.team===1?'#ff8a3b':'#8fd6ff'; dot(mx,my,1.5); });
+  g.restore();
+  // player arrow (points along heading)
+  const hx=Math.sin(player.heading||0), hz=Math.cos(player.heading||0), perpx=-hz, perpz=hx;
+  g.fillStyle='#ffffff'; g.beginPath();
+  g.moveTo(R+hx*8, R+hz*8); g.lineTo(R-hx*4+perpx*4.5, R-hz*4+perpz*4.5); g.lineTo(R-hx*4-perpx*4.5, R-hz*4-perpz*4.5);
+  g.closePath(); g.fill();
 }
 function updateMode(){
   const el=document.getElementById('mode');
