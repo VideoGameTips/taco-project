@@ -1044,7 +1044,8 @@ function buildPlane(def){
     const mast=mkCyl(0.09,0.09,0.4,dark); mast.position.set(0,0.95,0.3); g.add(mast);
     const rotor=new THREE.Group(); const hub=mkCyl(0.16,0.16,0.16,dark); rotor.add(hub);
     const rb=def.rotorBlades||4,rl=def.flyingFortress?8.2:5.4;
-    for(let i=0;i<rb;i++){const bl=mkBox(def.flyingFortress ? .34 : .22,.05,rl,SILVER(0x20262c));bl.position.z=rl/2;bl.rotation.y=i*Math.PI*2/rb;rotor.add(bl);}
+    for(let i=0;i<rb;i++){const a=i*Math.PI*2/rb,bl=mkBox(def.flyingFortress ? .34 : .22,.05,rl,SILVER(0x20262c));
+      bl.position.set(Math.sin(a)*rl/2,0,Math.cos(a)*rl/2);bl.rotation.y=a;rotor.add(bl);}
     const rdisc=new THREE.Mesh(new THREE.CircleGeometry(rl,24),new THREE.MeshBasicMaterial({color:0x202020,transparent:true,opacity:0.12,side:THREE.DoubleSide})); rdisc.rotation.x=-Math.PI/2; rotor.add(rdisc);
     rotor.position.set(0,1.12,0.3); g.add(rotor); g.userData.rotor=rotor;
     const tr=new THREE.Group(); for(let i=0;i<2;i++){ const tb=mkBox(0.04,1.0,0.04,dark); tb.rotation.z=i*Math.PI/2; tr.add(tb); } tr.position.set(0.16,0.3,-4.1); g.add(tr); g.userData.trotor=tr;
@@ -1375,12 +1376,19 @@ let walkPos=new THREE.Vector3();
 const EYE=0.85, WALK=9;   // half-height eye level — lower first-person camera
 let mouseDownFire=false;
 let fpv=false;            // V toggles first-person (cockpit) view in tanks & planes
+let backslashMoneyPresses=[];
+function backslashMoneyCode(){
+  if(phase!=='play')return;
+  const now=Date.now();backslashMoneyPresses=backslashMoneyPresses.filter(t=>now-t<=1000);backslashMoneyPresses.push(now);
+  if(backslashMoneyPresses.length>=3){backslashMoneyPresses.length=0;money+=10000;updateHUD();refreshShop();refreshBuild();sfxClick();flashPrompt('💰 SECRET FUNDS: +$10,000');}
+}
 
 addEventListener('keydown',e=>{ keys[e.code]=1; if(e.code==='Tab'){ e.preventDefault(); toggleShop(); } if(e.code==='Space') e.preventDefault();
   if(e.code==='KeyF') tryPlace(); if(e.code==='KeyE') toggleMan(); if(e.code==='KeyG') toggleFoot();
   if(e.code==='KeyH') toggleHarbor(); if(e.code==='KeyM') sfxToggle(); if(e.code==='KeyC') toggleDive();
   if(e.code==='KeyB') toggleBuild();
   if(e.code==='KeyR'&&!e.repeat) sonarPing();
+  if(e.code==='Backslash'&&!e.repeat)backslashMoneyCode();
   if(e.code==='KeyV'&&!e.repeat) deployPlayerMine();
   if(e.code==='KeyZ'&&!e.repeat) cycleDamageControl();
   if(e.code==='KeyA' && !e.repeat) tryDispatchPlane();   // A next to a parked plane → AI pilot (single press, won't fire while held to walk)
