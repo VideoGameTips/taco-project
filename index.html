@@ -236,6 +236,44 @@ const PLANES = {
           guns:{dmg:5,spd:175,cd:0.1,kind:'gun',col:0xffe070}, bomb:{dmg:80,splash:11,kind:'bomb',col:0x9aa0a8}, bombs:16, desc:'WWII heavy bomber — bristling defensive guns, huge bomb load.' },
   lancaster:{ name:'Avro Lancaster', cost:2300, hp:165, speed:44, maxSpeed:74, turn:0.8, col:0x4a4e44, shape:'prop', scale:1.55,
           guns:{dmg:5,spd:175,cd:0.11,kind:'gun',col:0xffe070}, bomb:{dmg:120,splash:14,kind:'bomb',col:0x3a3e34}, bombs:14, desc:'RAF night bomber — carries the heaviest blockbuster payloads.' },
+  b24:  { name:'B-24 Liberator', cost:2500, hp:180, speed:48, maxSpeed:78, turn:0.72, col:0x8d9296, shape:'heavyprop', scale:1.65,engineCount:4,
+          guns:{dmg:6,spd:180,cd:0.10,kind:'gun',col:0xffe070}, bomb:{dmg:88,splash:12,kind:'bomb',col:0x747a80}, bombs:18, desc:'Four-engine heavy bomber with a long-range conventional payload.' },
+  b29:  { name:'B-29 “Enola Gay”', cost:7500, hp:240, speed:54, maxSpeed:88, turn:0.58, col:0xb6bbc0, shape:'heavyprop', scale:2.0,engineCount:4,strategicBomb:true,
+          guns:{dmg:7,spd:190,cd:0.10,kind:'gun',col:0xffe070}, bomb:{dmg:1100,splash:85,kind:'bomb',col:0x9da3a8,strategic:true}, bombs:1,
+          desc:'Historic B-29 — carries one unreplenishable atomic payload with a vast blast radius.' },
+  b36:  { name:'B-36 Peacemaker', cost:5600, hp:310, speed:50, maxSpeed:84, turn:0.42, col:0xaeb4ba, shape:'heavyprop', scale:2.55,engineCount:6,
+          guns:{dmg:7,spd:185,cd:0.09,kind:'gun',col:0xffe070}, bomb:{dmg:105,splash:14,kind:'bomb',col:0x858c92}, bombs:30,
+          desc:'Colossal six-engine strategic bomber — slow, durable and loaded with conventional bombs.' },
+  tu95v:{ name:'Tu-95V Bear — Tsar Bomba',cost:22000,hp:290,speed:62,maxSpeed:106,turn:0.44,col:0x9da4aa,shape:'heavyprop',scale:2.5,engineCount:4,contraProp:true,strategicBomb:true,
+          guns:{dmg:8,spd:195,cd:0.11,kind:'gun',col:0xffe070},bomb:{dmg:3000,splash:180,kind:'bomb',col:0xd7d7cb,strategic:true},bombs:1,
+          desc:'Extremely expensive modified Bear. Carries the one-shot Tsar Bomba; it can erase an entire battle area.' },
+  halifax:{name:'Handley Page Halifax',cost:2450,hp:185,speed:45,maxSpeed:75,turn:.72,col:0x4f554c,shape:'heavyprop',scale:1.7,engineCount:4,
+          guns:{dmg:6,spd:178,cd:.1,kind:'gun',col:0xffe070},bomb:{dmg:86,splash:12,kind:'bomb',col:0x555b52},bombs:17,
+          desc:'Four-engine RAF heavy bomber with strong defensive armament.'},
+  pe8:{name:'Petlyakov Pe-8',cost:2700,hp:195,speed:48,maxSpeed:79,turn:.68,col:0x596252,shape:'heavyprop',scale:1.8,engineCount:4,
+          guns:{dmg:7,spd:185,cd:.1,kind:'gun',col:0xffe070},bomb:{dmg:115,splash:14,kind:'bomb',col:0x4c5448},bombs:12,
+          desc:'Rare Soviet heavy bomber capable of carrying exceptionally large conventional bombs.'},
+  he177:{name:'Heinkel He 177 Greif',cost:2750,hp:190,speed:54,maxSpeed:86,turn:.64,col:0x62675a,shape:'heavyprop',scale:1.75,engineCount:2,
+          guns:{dmg:8,spd:188,cd:.095,kind:'gun',col:0xffe070},bomb:{dmg:94,splash:13,kind:'bomb',col:0x55594d},bombs:16,
+          desc:'Fast German heavy bomber with paired engines and a heavy bomb load.'},
+  tu4:{name:'Tupolev Tu-4 Bull',cost:3900,hp:235,speed:53,maxSpeed:87,turn:.56,col:0xa5aaad,shape:'heavyprop',scale:2.0,engineCount:4,
+          guns:{dmg:8,spd:190,cd:.09,kind:'gun',col:0xffe070},bomb:{dmg:102,splash:14,kind:'bomb',col:0x858b8f},bombs:22,
+          desc:'Soviet long-range piston bomber with powerful remote defensive turrets.'},
+  vulcan:{ name:'Avro Vulcan',cost:4100,hp:190,speed:67,maxSpeed:112,turn:0.68,col:0x8b9096,shape:'wing',jet:true,scale:1.9,
+          guns:{dmg:3,spd:175,cd:0.3,kind:'gun',col:0xffe070},bomb:{dmg:105,splash:14,kind:'bomb',col:0x7f858a},bombs:21,
+          desc:'Delta-wing Cold War bomber with a large conventional payload.' },
+  tu16:{name:'Tupolev Tu-16 Badger',cost:4300,hp:215,speed:70,maxSpeed:118,turn:.62,col:0x949a9f,shape:'heavyjet',jet:true,scale:1.9,engineCount:2,
+          guns:{dmg:8,spd:200,cd:.1,kind:'gun',col:0xffe070},bomb:{dmg:112,splash:15,kind:'bomb',col:0x7e858a},bombs:18,
+          desc:'Swept-wing Soviet jet bomber with tail guns and a heavy conventional load.'},
+  m4bison:{name:'Myasishchev M-4 Bison',cost:4700,hp:245,speed:66,maxSpeed:110,turn:.5,col:0x9ca2a6,shape:'heavyjet',jet:true,scale:2.15,engineCount:4,
+          guns:{dmg:8,spd:200,cd:.1,kind:'gun',col:0xffe070},bomb:{dmg:118,splash:15,kind:'bomb',col:0x858b90},bombs:22,
+          desc:'Huge four-engine Soviet strategic jet bomber with long range and strong defenses.'},
+  b58:{name:'B-58 Hustler',cost:5200,hp:175,speed:92,maxSpeed:155,turn:.82,col:0xaeb3b7,shape:'heavyjet',jet:true,scale:1.75,engineCount:4,
+          guns:{dmg:7,spd:205,cd:.11,kind:'gun',col:0xffe070},bomb:{dmg:125,splash:16,kind:'bomb',col:0x8c9296},bombs:8,
+          desc:'Supersonic delta-wing bomber—extremely fast, but carries fewer large weapons.'},
+  victor:{name:'Handley Page Victor',cost:4800,hp:205,speed:76,maxSpeed:126,turn:.64,col:0xd0d2cf,shape:'heavyjet',jet:true,scale:2.0,engineCount:4,
+          guns:{dmg:3,spd:180,cd:.28,kind:'gun',col:0xffe070},bomb:{dmg:108,splash:14,kind:'bomb',col:0x8b8d88},bombs:20,
+          desc:'Crescent-wing British V-bomber with excellent range and a cavernous bomb bay.'},
   // ---- modern jets ----
   f16:  { name:'F-16 Fighting Falcon', cost:1700, hp:80, speed:84, maxSpeed:148, turn:2.05, col:0xa2a8b0, shape:'jet',
           guns:{dmg:6,spd:230,cd:0.06,kind:'gun',col:0xffe070}, bomb:{dmg:58,splash:6,kind:'missile',homing:true,spd:125,col:0xd0d6de,range:250}, bombs:5, desc:'Agile multirole jet. Vulcan cannon + homing missiles.' },
@@ -244,6 +282,40 @@ const PLANES = {
   // ---- transport helo ----
   uh60: { name:'UH-60 Black Hawk', cost:1150, hp:120, speed:0, maxSpeed:66, turn:2.2, climb:20, col:0x3c443a, shape:'heli', heli:true,
           guns:{dmg:6,spd:190,cd:0.05,kind:'gun',col:0xffd040}, desc:'Utility transport helo — tough airframe, twin door guns.' },
+  // ---- fictional history: Mackenzian Empire IV ----
+  m27:{name:'M-27',faction:'Mackenzian Empire IV',year:2011,cost:2300,hp:95,speed:82,maxSpeed:144,turn:2.15,col:0x4e5258,shape:'jet',jet:true,gunCount:2,
+       guns:{dmg:10,spd:245,cd:.055,kind:'gun',col:0xffd060},desc:'2011 air-superiority fighter. Twin high-velocity guns; 1,300 mph.'},
+  mh221:{name:'MH-221',faction:'Mackenzian Empire IV',year:1980,cost:2600,hp:105,speed:64,maxSpeed:89,turn:1.75,col:0x555b60,shape:'jet',jet:true,antiAirOnly:true,
+       bomb:{dmg:20,splash:3,kind:'missile',homing:true,spd:155,turn:5.2,range:430,col:0xc9ced2},bombs:48,
+       desc:'1980 interceptor, perfected in 2001. Uses masses of cheap AA missiles instead of bullets.'},
+  m42:{name:'M-42',faction:'Mackenzian Empire IV',year:2027,cost:3100,hp:110,speed:94,maxSpeed:166,turn:2.35,col:0x3f454c,shape:'jet',jet:true,gunCount:2,
+       guns:{dmg:12,spd:265,cd:.05,kind:'gun',col:0xffd060},desc:'2027 twin-gun air-superiority fighter; 1,500 mph.'},
+  mhkl235:{name:'MHKL-235',faction:'Mackenzian Empire IV',year:2018,cost:2100,hp:145,speed:78,maxSpeed:142,turn:1.8,col:0x555057,shape:'jet',jet:true,gunCount:2,kamikazeDamage:720,
+       guns:{dmg:4,spd:220,cd:.075,kind:'gun',col:0xffc060},desc:'2018 search-and-destroy aircraft. Weak guns, reinforced into a devastating wartime kamikaze.'},
+  amh112:{name:'AMH-112 Juggernaut',faction:'Mackenzian Empire IV',year:2017,cost:5900,hp:520,speed:0,maxSpeed:55,turn:1.15,climb:15,col:0x34383b,shape:'heli',heli:true,scale:1.45,rotorBlades:6,gunCount:8,flyingFortress:true,
+       guns:{dmg:18,spd:225,cd:.035,kind:'gun',col:0xffc040},bomb:{dmg:48,splash:6,kind:'missile',homing:true,spd:145,turn:3.8,range:360,col:0x687078},bombs:30,
+       desc:'2017 flying destroyer: eight guns, thirty missiles, immense armor and 500 mph speed.'},
+  // ---- fictional history: Pincurchin Republic ----
+  ss17:{name:'SS-17 Arc Fighter',faction:'Pincurchin Republic',year:2052,cost:4200,hp:115,speed:112,maxSpeed:221,turn:2.65,col:0x425a72,shape:'jet',jet:true,gunCount:2,
+       guns:{dmg:8,spd:360,cd:.018,kind:'gun',col:0x65e8ff},desc:'2052 fighter with twin ultra-fast electric guns and a 2,000 mph top speed.'},
+  p11:{name:'P-11 Stealth Bomber',faction:'Pincurchin Republic',year:2032,cost:6500,hp:210,speed:95,maxSpeed:177,minPayloadSpeed:111,payloadSpeed:true,turn:.72,col:0x222b35,shape:'wing',jet:true,scale:2.1,
+       guns:{dmg:3,spd:185,cd:.28,kind:'gun',col:0x85d9ff},bomb:{dmg:100,splash:14,kind:'bomb',col:0x39434e},bombs:50,
+       desc:'2032 stealth heavy bomber. 1,000 mph fully loaded, accelerating to 1,600 mph when empty.'},
+  sp9r:{name:'SP-9-R',faction:'Pincurchin Republic',year:1999,cost:3900,hp:70,speed:150,maxSpeed:277,turn:2.2,col:0x66798a,shape:'jet',jet:true,gunCount:2,fuel:48,
+       guns:{dmg:8,spd:260,cd:.05,kind:'gun',col:0x7de9ff},desc:'1999 anti-communist scout. Twin guns and 2,500 mph speed, but extremely little fuel.'},
+  // ---- fictional history: Arcian Union ----
+  a251:{name:'A-251',faction:'Arcian Union',year:2025,cost:5200,hp:130,speed:111,maxSpeed:332,minFuelSpeed:111,fuelSpeed:true,fuel:160,turn:2.05,col:0x6b4b4b,shape:'jet',jet:true,antiAirOnly:true,
+       guns:{dmg:6,spd:235,cd:.026,kind:'gun',spread:.08,col:0xff5d4d},bomb:{dmg:26,splash:4,kind:'missile',homing:true,spd:170,turn:4.4,range:420,col:0xd75b4f},bombs:15,
+       desc:'2025 fighter with spray-fire guns and fifteen missiles. Speeds from 1,000–3,000 mph as fuel burns away.'},
+  ah887:{name:'AH-887 Flying Superfortress',faction:'Arcian Union',year:2033,cost:9800,hp:780,speed:0,maxSpeed:122,turn:.72,climb:18,col:0x4d3434,shape:'heli',heli:true,scale:1.9,rotorBlades:3,gunCount:8,flyingFortress:true,gunAmmo:500,
+       guns:{dmg:30,spd:135,cd:.11,kind:'missile',splash:5,col:0xff6a40},bomb:{dmg:54,splash:7,kind:'missile',homing:true,spd:150,turn:3.7,range:390,col:0x8c4141},bombs:80,
+       desc:'2033 twin-engine flying fortress. Three-blade main rotor, 80 missiles and 500 click-fired RPG shots.'},
+  lfc5:{name:'LFC-5',faction:'Arcian Union',year:2046,cost:38000,hp:260,speed:125,maxSpeed:221,turn:.75,col:0x4a3034,shape:'heavyjet',jet:true,scale:1.8,engineCount:2,strategicBomb:true,
+       bomb:{dmg:720,splash:72,kind:'missile',homing:true,spd:190,turn:3.5,range:900,col:0xe45a4f,strategic:true},bombs:13,
+       desc:'Restricted 2046 search-and-destroy aircraft carrying thirteen tracking nuclear warheads.'},
+  // ---- distant independent design ----
+  chicken3:{name:'Chicken-3',faction:'Distant Country',cost:3000,hp:100,speed:92,maxSpeed:177,turn:2.3,col:0xd9c174,shape:'jet',jet:true,gunCount:3,
+       guns:{dmg:10,spd:250,cd:.04,kind:'gun',col:0xffdf62},desc:'1,600 mph air-superiority fighter armed with three guns.'},
 };
 // Handheld small arms — carried when you go ashore (G). Buy in the shop, switch with Q. gfx = viewmodel silhouette.
 const HANDHELD = {
@@ -961,12 +1033,53 @@ function buildPlane(def){
     else { for(const sx of [-1,1]){ // transports (Black Hawk): a door gun out each side
       const pintle=mkBox(0.1,0.28,0.1,dark); pintle.position.set(sx*0.55,0.05,0.5); g.add(pintle);
       const dgun=mkCyl(0.05,0.05,1.1,dark); dgun.rotation.x=Math.PI/2; dgun.rotation.y=sx*0.12; dgun.position.set(sx*0.62,0.05,1.0); g.add(dgun); } }
+    if(def.flyingFortress){
+      const armor=mkBox(2.4,1.25,4.2,SILVER(0x343a3e));armor.position.set(0,.05,.15);g.add(armor);
+      for(const sx of[-1,1]){
+        const engine=mkCyl(.55,.65,2.4,SILVER(0x454c52),16);engine.rotation.x=Math.PI/2;engine.position.set(sx*1.55,.55,-.35);g.add(engine);
+        const rack=mkBox(.55,.55,3.6,SILVER(0x292f34));rack.position.set(sx*2.0,-.2,.1);g.add(rack);
+        for(let j=0;j<4;j++){const gun=mkCyl(.06,.07,1.6,dark);gun.rotation.x=Math.PI/2;gun.position.set(sx*(1.05+(j%2)*.38),-.3+Math.floor(j/2)*.48,2.1);g.add(gun);}
+      }
+    }
     const mast=mkCyl(0.09,0.09,0.4,dark); mast.position.set(0,0.95,0.3); g.add(mast);
     const rotor=new THREE.Group(); const hub=mkCyl(0.16,0.16,0.16,dark); rotor.add(hub);
-    for(let i=0;i<4;i++){ const bl=mkBox(0.22,0.04,5.4,SILVER(0x20262c)); bl.rotation.y=i*Math.PI/2; rotor.add(bl); }
-    const rdisc=new THREE.Mesh(new THREE.CircleGeometry(5.4,24),new THREE.MeshBasicMaterial({color:0x202020,transparent:true,opacity:0.12,side:THREE.DoubleSide})); rdisc.rotation.x=-Math.PI/2; rotor.add(rdisc);
+    const rb=def.rotorBlades||4,rl=def.flyingFortress?8.2:5.4;
+    for(let i=0;i<rb;i++){const bl=mkBox(def.flyingFortress ? .34 : .22,.05,rl,SILVER(0x20262c));bl.position.z=rl/2;bl.rotation.y=i*Math.PI*2/rb;rotor.add(bl);}
+    const rdisc=new THREE.Mesh(new THREE.CircleGeometry(rl,24),new THREE.MeshBasicMaterial({color:0x202020,transparent:true,opacity:0.12,side:THREE.DoubleSide})); rdisc.rotation.x=-Math.PI/2; rotor.add(rdisc);
     rotor.position.set(0,1.12,0.3); g.add(rotor); g.userData.rotor=rotor;
     const tr=new THREE.Group(); for(let i=0;i<2;i++){ const tb=mkBox(0.04,1.0,0.04,dark); tb.rotation.z=i*Math.PI/2; tr.add(tb); } tr.position.set(0.16,0.3,-4.1); g.add(tr); g.userData.trotor=tr;
+  } else if(shape==='heavyjet'){
+    const fus=mkCyl(.5,.7,9,m,18);fus.rotation.x=Math.PI/2;g.add(fus);
+    g.add(cone(.5,2.1,m,5.5,true));g.add(cone(.34,2.1,m,-5.5,false));
+    const cockpit=new THREE.Mesh(new THREE.SphereGeometry(.5,14,9),glass);cockpit.scale.set(1,.65,1.9);cockpit.position.set(0,.48,3.7);g.add(cockpit);
+    const wing=wingMesh(16,4.2,.75,3.2,.2,m);wing.position.set(0,0,-.15);g.add(wing);
+    const tailW=wingMesh(6,1.5,.55,1.0,.14,m);tailW.position.set(0,.2,-4.4);g.add(tailW);
+    const fin=mkBox(.18,2.5,1.9,m);fin.position.set(0,1.25,-4.55);g.add(fin);
+    g.userData.burners=[];
+    const ec=def.engineCount||4;
+    for(let i=0;i<ec;i++){const x=(i-(ec-1)/2)*(11/(ec-1)),pod=mkCyl(.38,.48,2.3,SILVER(0x4a525a),14);
+      pod.rotation.x=Math.PI/2;pod.position.set(x,-.34,-.2);g.add(pod);
+      const intake=mkCyl(.35,.35,.2,dark,14);intake.rotation.x=Math.PI/2;intake.position.set(x,-.34,.95);g.add(intake);
+      const flame=new THREE.Mesh(new THREE.ConeGeometry(.24,1.1,10),new THREE.MeshBasicMaterial({color:0xff8030,transparent:true,opacity:.7}));
+      flame.rotation.x=-Math.PI/2;flame.position.set(x,-.34,-1.75);g.add(flame);g.userData.burners.push(flame);
+    }
+  } else if(shape==='heavyprop'){
+    const fus=mkCyl(.48,.65,8.4,m,18);fus.rotation.x=Math.PI/2;g.add(fus);
+    g.add(cone(.48,1.8,m,5.1,true));g.add(cone(.32,2.0,m,-5.1,false));
+    const cockpit=new THREE.Mesh(new THREE.SphereGeometry(.48,14,9),glass);cockpit.scale.set(1,.65,1.8);cockpit.position.set(0,.45,3.45);g.add(cockpit);
+    const wing=wingMesh(16,3.2,1.15,.7,.22,m);wing.position.set(0,0,.15);g.add(wing);
+    const tailW=wingMesh(6.2,1.5,.65,.35,.15,m);tailW.position.set(0,.18,-4.1);g.add(tailW);
+    const fin=mkBox(.18,2.3,1.8,m);fin.position.set(0,1.15,-4.25);g.add(fin);
+    g.userData.props=[];
+    const ec=def.engineCount||4;
+    for(let i=0;i<ec;i++){const x=(i-(ec-1)/2)*(12/(ec-1)),eng=mkCyl(.48,.52,2.0,SILVER(0x4f565d),14);
+      eng.rotation.x=Math.PI/2;eng.position.set(x,-.05,.65);g.add(eng);
+      const pg=new THREE.Group();const blades=def.contraProp?8:4;
+      for(let b=0;b<blades;b++){const bl=mkBox(.1,2.5,.06,SILVER(0x20262c));bl.rotation.z=b*Math.PI*2/blades;pg.add(bl);}
+      const disc=new THREE.Mesh(new THREE.CircleGeometry(1.3,20),new THREE.MeshBasicMaterial({color:0x202020,transparent:true,opacity:.12,side:THREE.DoubleSide}));pg.add(disc);
+      pg.position.set(x,-.05,1.75);g.add(pg);g.userData.props.push(pg);
+    }
+    if(def.strategicBomb){const bomb=mkCyl(.48,.62,3.4,SILVER(0xc5c6b8),16);bomb.rotation.x=Math.PI/2;bomb.position.set(0,-.85,-.2);g.add(bomb);}
   } else { // prop (WWII)
     const fus=mkCyl(0.3,0.42,3.8,m); fus.rotation.x=Math.PI/2; g.add(fus);
     const cowl=mkCyl(0.44,0.36,0.7,SILVER(0x5a6068)); cowl.rotation.x=Math.PI/2; cowl.position.z=2.1; g.add(cowl);
@@ -992,6 +1105,12 @@ function buildPlane(def){
       if(def.bomb.kind!=='missile'){ const fin=mkBox(0.02,0.3,0.3,dark); fin.position.set(sx*1.9,-0.42,-0.5); g.add(fin); } } }
     if(shape==='jet'){ for(const sx of [-1,1]){ const intake=mkBox(0.35,0.4,0.9,dark); intake.position.set(sx*0.55,-0.05,0.4); g.add(intake); } }
     const pitot=mkCyl(0.015,0.015,0.6,SILVER(0x222)); pitot.rotation.x=Math.PI/2; pitot.position.set(0,0,shape==='attack'?3.6:3.4); g.add(pitot);
+  }
+  if(def.gunCount&&shape!=='heli'){for(let i=0;i<Math.min(8,def.gunCount);i++){const x=(i-(def.gunCount-1)/2)*.22;
+    const gun=mkCyl(.035,.045,1.15,dark);gun.rotation.x=Math.PI/2;gun.position.set(x,-.12,shape==='heavyjet'||shape==='heavyprop'?4.8:3.0);g.add(gun);}}
+  if(def.faction){
+    const fc=def.faction==='Mackenzian Empire IV'?0x8c2638:def.faction==='Pincurchin Republic'?0x37a8d4:def.faction==='Arcian Union'?0xd33a31:0xf1c84a;
+    const band=mkBox(shape==='heli'?2.2:5.2,.08,.5,new THREE.MeshBasicMaterial({color:fc}));band.position.set(0,.18,shape==='heli'?-1.2:-2.2);g.add(band);
   }
   if(def.scale) g.scale.setScalar(def.scale);   // big bombers (B-17 / B-52) ride larger
   g.castShadow=true; return g;
@@ -1113,7 +1232,7 @@ function updateSalvage(dt,t){
     if(player&&player.hp>0&&s.pos.distanceTo(player.pos)<28){
       if(s.type==='credits'){const value=180+Math.floor(Math.random()*171);money+=value;flashPrompt('📦 Salvaged $'+value);}
       else if(s.type==='repair'){player.hp=Math.min(player.maxhp,player.hp+100);const c=player.crit;if(c){c.fire=Math.max(0,c.fire-1);c.flood=Math.max(0,c.flood-1);}flashPrompt('📦 Salvaged repair stores — hull restored');}
-      else {money+=100;planes.forEach(p=>{if(p.def.bombs)p.bombsLeft=p.def.bombs;});flashPrompt('📦 Salvaged aviation supplies');}
+      else {money+=100;planes.forEach(p=>{if(p.def.bombs&&!p.def.strategicBomb)p.bombsLeft=p.def.bombs;if(p.def.gunAmmo!=null)p.gunAmmo=p.def.gunAmmo;});flashPrompt('📦 Salvaged aviation supplies');}
       sfxClick();updateHUD();refreshShop();removeSalvageAt(i);continue;
     }
     if(s.life<=0)removeSalvageAt(i);
@@ -1443,13 +1562,14 @@ function updateIslandAirService(dt){
       piloting.hp=Math.min(piloting.maxhp,piloting.hp+5*boost*dt);
       piloting.islandServiceT=(piloting.islandServiceT||0)+dt;
       if(piloting.islandServiceT>=2/boost){ piloting.islandServiceT=0; const pa=piloting.plane;
-        if(pa.def.bombs&&pa.bombsLeft<pa.def.bombs) pa.bombsLeft++; }
+        if(pa.def.bombs&&!pa.def.strategicBomb&&pa.bombsLeft<pa.def.bombs)pa.bombsLeft++;
+        if(pa.def.gunAmmo!=null)pa.gunAmmo=Math.min(pa.def.gunAmmo,(pa.gunAmmo||0)+12); }
     } else piloting.serviceIsland=null;
   }
   aiPlanes.forEach(p=>{
     const base=(!p.def.heli&&p.def.shape==='wing')?null:islands.find(i=>i.capturable&&i.owner===p.team&&p.pos.y<70&&insideIslandRange(p.pos,i,70)&&
       islandStructures(i,p.team,p.def.heli?'helipad':'airstrip').some(structurePowered));
-    if(!base||!p.def.bombs||p.bombs>=p.def.bombs){ p.islandRearmT=0; return; }
+    if(!base||!p.def.bombs||p.def.strategicBomb||p.bombs>=p.def.bombs){ p.islandRearmT=0; return; }
     const boost=islandStructures(base,p.team,'fuel').length?1.7:1;p.hp=Math.min(p.maxhp,p.hp+4*boost*dt);
     p.islandRearmT=(p.islandRearmT||0)+dt*boost;
     if(p.islandRearmT>=2.5){ p.islandRearmT=0; p.bombs++; }
@@ -1882,11 +2002,11 @@ function updateSupportShips(dt){
     });
     aiPlanes.forEach(p=>{if(p.team!==tender.team||p.hp<=0||p.pos.distanceTo(tender.pos)>190)return;
       p.hp=Math.min(p.maxhp,p.hp+7*dt);p.tenderT=(p.tenderT||0)+dt;
-      if(p.tenderT>=2.5){p.tenderT=0;if(p.def.bombs)p.bombs=Math.min(p.def.bombs,p.bombs+1);}});
+      if(p.tenderT>=2.5){p.tenderT=0;if(p.def.bombs&&!p.def.strategicBomb)p.bombs=Math.min(p.def.bombs,p.bombs+1);if(p.def.gunAmmo!=null)p.gunAmmo=Math.min(p.def.gunAmmo,(p.gunAmmo||0)+12);}});
     if(tender.team===0&&piloting&&piloting.pos.distanceTo(tender.pos)<190){
       piloting.hp=Math.min(piloting.maxhp,piloting.hp+7*dt);piloting.fuel=Math.min(piloting.fuelMax,piloting.fuel+18*dt);
       piloting.tenderT=(piloting.tenderT||0)+dt;if(piloting.tenderT>=2.5){piloting.tenderT=0;
-        const pa=piloting.plane;if(pa.def.bombs)pa.bombsLeft=Math.min(pa.def.bombs,pa.bombsLeft+1);}}
+        const pa=piloting.plane;if(pa.def.bombs&&!pa.def.strategicBomb)pa.bombsLeft=Math.min(pa.def.bombs,pa.bombsLeft+1);if(pa.def.gunAmmo!=null)pa.gunAmmo=Math.min(pa.def.gunAmmo,(pa.gunAmmo||0)+12);}}
   });
 }
 // ---- one ship fires its whole arsenal: each weapon engages the kind of target it's good against ----
@@ -1975,7 +2095,7 @@ function buildShopUI(){
     const p=PLANES[id];
     const d=document.createElement('div'); d.className='witem plane'; d.dataset.plane=id;
     d.innerHTML=`<div class="wn"><span>✈ ${p.name}</span><span class="wc">$${priceOf(p.cost)}</span></div>
-      <div class="wd">${p.desc}</div>`;
+      <div class="wd">${p.faction?`<span style="color:#7fb4d8">${p.faction}${p.year?' · '+p.year:''}</span><br>`:''}${p.desc}</div>`;
     d.onclick=()=>buyPlane(id);
     list.appendChild(d);
   });
@@ -2232,7 +2352,7 @@ function buyPlane(id){
   if(!spot){ flashPrompt('No free flight spot on deck'); return; }
   money-=cost;
   const g=buildPlane(p); g.position.copy(spot.pos); g.rotation.y=0; player.build.group.add(g);
-  planes.push({ def:p, group:g, spot, parked:true, bombsLeft:p.bombs||0 });
+  planes.push({def:p,group:g,spot,parked:true,bombsLeft:p.bombs||0,gunAmmo:p.gunAmmo==null?null:p.gunAmmo});
   spot.taken=true; refreshShop(); updateHUD(); sfxClick(); flashPrompt(p.name+' ready on deck — press E aboard it to fly');
 }
 function buyTank(id){
@@ -2248,6 +2368,8 @@ function spinProp(pa,dt){
   const dead = piloting && piloting.plane===pa && !piloting.engineOn;   // engine out → prop windmills / stops
   const k = dead ? 0.15 : 1;
   if(pa.group.userData.prop) pa.group.userData.prop.rotation.z += dt*40*k;
+  if(pa.group.userData.props)pa.group.userData.props.forEach((p,i)=>p.rotation.z+=dt*34*k*(i%2?-1:1));
+  if(pa.group.userData.burners)pa.group.userData.burners.forEach(b=>b.scale.setScalar(dead?0:.75+Math.random()*.45));
   if(pa.group.userData.rotor) pa.group.userData.rotor.rotation.y += dt*30*k;     // helicopter main rotor
   if(pa.group.userData.trotor) pa.group.userData.trotor.rotation.x += dt*40*k;   // tail rotor
   if(pa.group.userData.burner) pa.group.userData.burner.scale.setScalar(dead?0:0.7+Math.random()*0.6);
@@ -2257,8 +2379,9 @@ function flyPlane(pa){
   if(player.crit && player.crit.deck){ flashPrompt('✈️ Flight deck wrecked — can’t launch until it’s repaired'); return; }
   const wp=pa.group.getWorldPosition(new THREE.Vector3());
   scene.attach(pa.group);                          // detach to world, keep transform
+  const fuel=pa.def.fuel||200;
   piloting={ plane:pa, pos:wp.clone(), speed:pa.def.speed*0.35, gunCd:0, bombCd:0, roll:0, lastYaw:player.heading||0, phase:'takeoff', taxiT:0, hp:pa.def.hp, maxhp:pa.def.hp,
-    fuel:200, fuelMax:200, engineOn:true, gLoad:0, stallT:0, parts:initPlaneParts(pa.def) };   // doubled endurance + component damage model
+    fuel,fuelMax:fuel,engineOn:true,gLoad:0,stallT:0,parts:initPlaneParts(pa.def) };
   pa.parked=false; camYaw.v=player.heading||0; camPitch.v=0.05;
   const cv=document.getElementById('c'); if(document.pointerLockElement!==cv) cv.requestPointerLock();
   flashPrompt('Takeoff roll…'); updateMode();
@@ -2274,16 +2397,23 @@ function recoverPlane(){ // safe landing on the ship
   piloting=null; flashPrompt('Recovered safely on deck.'); updateMode();
 }
 function playerKamikaze(P){ // ram an enemy ship / land unit / harbor by diving into it
-  const p=P.pos;
-  for(const e of enemies){ if(e.sinkT>0)continue; if(p.y<14 && Math.hypot(p.x-e.pos.x,p.z-e.pos.z) < e.def.beam/2+4){ damageTarget(e,120,null); crashPlane('Kamikaze run on the '+e.def.name+'!'); return true; } }
-  for(const u of landUnits){ if(u.team!==1||u.dead)continue; if(p.y<10 && Math.hypot(p.x-u.pos.x,p.z-u.pos.z) < 6){ u.hp-=120; if(u.hp<=0) killLandUnit(u); crashPlane('Kamikaze!'); return true; } }
-  if(enemyHarbor && enemyHarbor.hp>0 && p.y<16 && Math.hypot(p.x-enemyHarbor.pos.x,p.z-enemyHarbor.pos.z)<enemyHarbor.r){ damageHarbor(enemyHarbor,150); crashPlane('Kamikaze into the harbor!'); return true; }
+  const p=P.pos,kd=P.plane.def.kamikazeDamage||120;
+  for(const e of enemies){ if(e.sinkT>0)continue; if(p.y<14 && Math.hypot(p.x-e.pos.x,p.z-e.pos.z) < e.def.beam/2+4){ damageTarget(e,kd,null); crashPlane('Kamikaze run on the '+e.def.name+'!'); return true; } }
+  for(const u of landUnits){ if(u.team!==1||u.dead)continue; if(p.y<10 && Math.hypot(p.x-u.pos.x,p.z-u.pos.z) < 6){ u.hp-=kd; if(u.hp<=0) killLandUnit(u); crashPlane('Kamikaze!'); return true; } }
+  if(enemyHarbor && enemyHarbor.hp>0 && p.y<16 && Math.hypot(p.x-enemyHarbor.pos.x,p.z-enemyHarbor.pos.z)<enemyHarbor.r){ damageHarbor(enemyHarbor,kd*1.2); crashPlane('Kamikaze into the harbor!'); return true; }
   return false;
 }
+function planeMaxSpeed(P,def){
+  if(def.fuelSpeed){const f=Math.max(0,Math.min(1,P.fuel/P.fuelMax));return (def.minFuelSpeed||def.speed)+(def.maxSpeed-(def.minFuelSpeed||def.speed))*(1-f);}
+  if(def.payloadSpeed){const f=def.bombs?Math.max(0,Math.min(1,P.plane.bombsLeft/def.bombs)):0;return def.maxSpeed-(def.maxSpeed-(def.minPayloadSpeed||def.speed))*f;}
+  return def.maxSpeed;
+}
+function consumePlaneGun(pa){if(pa.gunAmmo==null)return true;if(pa.gunAmmo<=0)return false;pa.gunAmmo--;return true;}
+function aircraftGunDir(dir,w){const d=dir.clone(),sp=w.spread||0;if(sp){d.x+=(Math.random()-.5)*sp;d.y+=(Math.random()-.5)*sp;d.z+=(Math.random()-.5)*sp;d.normalize();}return d;}
 // realistic engine: burns fuel, and a fixed-wing flames out if you haul it around too steeply
 function planeEngine(P, def, dt){
   if(P.engineOn){ const leak=(P.parts&&P.parts.fuel>0)?1+P.parts.fuel*0.6:1;   // a holed tank drains faster
-    const burn=(def.shape==='jet'?1.9:def.heli?1.2:1.3)*(keys['KeyW']?1.5:1)*leak;
+    const burn=((def.shape==='jet'||def.shape==='heavyjet'||def.jet)?1.9:def.heli?1.2:1.3)*(keys['KeyW']?1.5:1)*leak;
     P.fuel=Math.max(0,P.fuel-burn*dt);
     if(P.fuel<=0){ P.engineOn=false; flashPrompt('OUT OF FUEL — engine dead! Glide her down.'); } }
   if(!def.heli && P.engineOn && P.fuel>0){ // over-stress: a sustained steep/high-G maneuver flames it out
@@ -2301,7 +2431,7 @@ const PART_NAME={ wingL:'Left wing', wingR:'Right wing', engL:'Engine', engR:'Ri
 const PART_STATE=['','damaged','CRITICAL','DESTROYED'];
 function initPlaneParts(def){
   if(def.heli) return { rotor:0, tail:0, engL:0, fuel:0, weap:0, gear:0 };
-  const twin = def.shape==='attack';   // A-10 / P-38 run two engines
+  const twin = def.shape==='attack'||def.shape==='heavyprop'||def.shape==='heavyjet';   // multi-engine aircraft use left/right engine banks
   return { wingL:0, wingR:0, engL:0, engR: twin?0:-1, tail:0, elev:0, ailer:0, fuel:0, weap:0, gear:0 };
 }
 function partLabel(P,k){ return (k==='engL' && P.parts.engR!==undefined && P.parts.engR>=0)?'Left engine':PART_NAME[k]; }
@@ -2418,8 +2548,8 @@ function updatePilot(dt){
     if(Math.hypot(P.pos.x,P.pos.z)>6200){ P.pos.x*=0.99; P.pos.z*=0.99; }
     const hdir=new THREE.Vector3(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch));
     if(P.gunCd>0)P.gunCd-=dt; if(P.bombCd>0)P.bombCd-=dt;
-    if(mouseDownFire && def.guns && pr.weap<3 && P.gunCd<=0){ P.gunCd=def.guns.cd; const muz=P.pos.clone().add(hdir.clone().multiplyScalar(2.5));
-      const gdir=reticleAim(muz,700,true).sub(muz).normalize(); spawnShell(def.guns,muz,gdir,0,null); }
+    if(mouseDownFire&&def.guns&&pr.weap<3&&P.gunCd<=0&&consumePlaneGun(pa)){P.gunCd=def.guns.cd;const muz=P.pos.clone().add(hdir.clone().multiplyScalar(2.5));
+      const gdir=reticleAim(muz,700,true).sub(muz).normalize();spawnShell(def.guns,muz,aircraftGunDir(gdir,def.guns),0,null);}
     if(keys['Space'] && def.bomb && pr.weap<3 && P.plane.bombsLeft>0 && P.bombCd<=0){ P.bombCd=0.6; dropBomb(P); }
     return;
   }
@@ -2438,7 +2568,7 @@ function updatePilot(dt){
   const pitch=Math.max(-1.1,Math.min(1.1,camPitch.v))*elevCtl, yaw=camYaw.v;        // elevators limit pitch authority
   const dir=new THREE.Vector3(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch));
   if(P.engineOn){
-    const mx=def.maxSpeed*(0.45+0.55*eH);                                           // reduced thrust
+    const mx=planeMaxSpeed(P,def)*(0.45+0.55*eH);                                  // payload/fuel and engine health set available thrust
     if(keys['KeyW']) P.speed=Math.min(mx,P.speed+34*eH*dt);
     if(keys['KeyS']) P.speed=Math.max(def.speed*0.45,P.speed-34*dt);
     P.pos.add(dir.clone().multiplyScalar(P.speed*dt));
@@ -2460,12 +2590,13 @@ function updatePilot(dt){
   if(Math.hypot(P.pos.x,P.pos.z)>6200){ P.pos.x*=0.99; P.pos.z*=0.99; }
   // weapons (a destroyed weapons system can't fire)
   if(P.gunCd>0)P.gunCd-=dt; if(P.bombCd>0)P.bombCd-=dt;
-  if(mouseDownFire && def.guns && pr.weap<3 && P.gunCd<=0){ P.gunCd=def.guns.cd; const muzzle=P.pos.clone().add(dir.clone().multiplyScalar(3));
-    const gdir=reticleAim(muzzle,700,true).sub(muzzle).normalize(); spawnShell(def.guns,muzzle,gdir,0,null); }
+  if(mouseDownFire&&def.guns&&pr.weap<3&&P.gunCd<=0&&consumePlaneGun(pa)){P.gunCd=def.guns.cd;const muzzle=P.pos.clone().add(dir.clone().multiplyScalar(3));
+    const gdir=reticleAim(muzzle,700,true).sub(muzzle).normalize();spawnShell(def.guns,muzzle,aircraftGunDir(gdir,def.guns),0,null);}
   if(keys['Space'] && def.bomb && pr.weap<3 && P.plane.bombsLeft>0 && P.bombCd<=0){ P.bombCd=0.7; dropBomb(P); }
 }
 function dropBomb(P){
   const def=P.plane.def, w=def.bomb; P.plane.bombsLeft--;
+  if(def.strategicBomb)flashPrompt(def===PLANES.tu95v?'☢ TSAR BOMBA RELEASED — CLEAR THE BLAST AREA!':'☢ STRATEGIC WEAPON RELEASED — CLEAR THE BLAST AREA!');
   const yaw=camYaw.v, pitch=Math.max(-1.1,Math.min(1.1,camPitch.v));
   const fwd=new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));
   const from=P.pos.clone().add(new THREE.Vector3(0,-0.8,0));
@@ -2504,7 +2635,8 @@ function fireTurret(pl, aim){
 function spawnShell(w,pos,dir,team,owner,enemyArc,velOverride){
   while(shells.length>=MAX_SHELLS) removeShellAt(0);
   let geo, col=w.col||0xffe0a0;
-  if(w.kind==='torpedo'){ geo=new THREE.CylinderGeometry(0.18,0.18,1.6,8); }
+  if(w.strategic){geo=new THREE.CylinderGeometry(.65,.9,3.4,14);}
+  else if(w.kind==='torpedo'){ geo=new THREE.CylinderGeometry(0.18,0.18,1.6,8); }
   else if(w.kind==='missile'||w.kind==='cannon'||w.kind==='bomb'){ geo=new THREE.ConeGeometry(0.22,0.9,8); }
   else geo=new THREE.SphereGeometry(0.22,8,8);
   const m=new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:1.3,metalness:0.4,roughness:0.4}));
@@ -2515,14 +2647,14 @@ function spawnShell(w,pos,dir,team,owner,enemyArc,velOverride){
   if(lob) vel.y += lob;
   if(w.kind==='torpedo'){ m.position.y=0.6; vel.y=0; }
   const sh={ mesh:m, vel, dmg:w.dmg, team, splash:w.splash||0, homing:!!w.homing, water:w.kind==='torpedo',
-    arc:!!lob||!!velOverride, owner, life:w.life||9, col, aa:!!w.aa, turn:w.turn||2.4, maxDist:w.range||0, dist:0 };
+    arc:!!lob||!!velOverride, owner, life:w.life||9, col, aa:!!w.aa, strategic:!!w.strategic, turn:w.turn||2.4, maxDist:w.range||0, dist:0 };
   // flame streak / tracer trail (skip torpedoes — they're in the water)
   if(w.kind!=='torpedo'){
     const heavy = w.kind==='cannon'||w.kind==='bomb'||w.kind==='missile'||w.splash;
     const tcol = heavy?0xff7a20:0xffc040;
     const trail=new THREE.Mesh(new THREE.CylinderGeometry(heavy?0.2:0.1, 0.02, 1, 6),
       new THREE.MeshBasicMaterial({color:tcol,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending,depthWrite:false}));
-    scene.add(trail); sh.trail=trail; sh.trailLen=Math.min(heavy?7:9, w.spd*0.06);
+    scene.add(trail); sh.trail=trail; sh.trailLen=Math.min(heavy?7:9,(w.spd||vel.length())*0.06);
   }
   shells.push(sh);
   sfxFire(w.kind, pos);
@@ -2647,15 +2779,23 @@ function damageTarget(t,dmg,owner,hitPos){
   t.hp-=dmg; damageCompartment(t,dmg,hitPos); applyCrit(t,dmg); if(t.hp<=0 && t.sinkT===0){ t.hp=0; t.sinkT=0.001; spawnSalvage(t.pos.clone());
     sunk++; money+=t.def.hp>400?700:t.def.hp>250?500:350; updateHUD(); refreshShop(); }
 }
+function strategicBlastFx(pos,rad){
+  boom(pos,Math.min(30,3+rad*.15));
+  const shock=new THREE.Mesh(new THREE.RingGeometry(8,13,48),new THREE.MeshBasicMaterial({color:0xffe2a0,transparent:true,opacity:.85,side:THREE.DoubleSide,depthWrite:false}));
+  shock.rotation.x=-Math.PI/2;shock.position.copy(pos).setY(2);scene.add(shock);fx.push({mesh:shock,life:2.4,max:2.4,op:.85,fade:true,grow:true,growRate:2.1});
+  for(let i=0;i<6;i++){const cloud=new THREE.Mesh(new THREE.SphereGeometry(5+i*1.4,10,8),new THREE.MeshBasicMaterial({color:i<2?0xff9a42:0x4a4640,transparent:true,opacity:.75}));
+    cloud.position.copy(pos).add(new THREE.Vector3((Math.random()-.5)*8,10+i*10,(Math.random()-.5)*8));scene.add(cloud);
+    fx.push({mesh:cloud,life:4+i*.35,max:5,op:.75,fade:true,grow:true,growRate:.5,vel:new THREE.Vector3(0,4+i,0)});}
+}
 // neutral explosion — damages EVERYTHING nearby (ships, land units, harbors) + fireball visual
-function blastAll(pos,dmg,rad){
+function blastAll(pos,dmg,rad,massive=false){
   const hurt=(tp,size,apply)=>{ const d=tp.distanceTo(pos), R=rad+size; if(d<R) apply(dmg*(1-d/R*0.6)); };
   if(player&&player.hp>0) hurt(player.pos.clone().setY(player.def.deckY), player.def.beam/2, x=>damageTarget(player,x,null,pos));
   enemies.forEach(e=>{ if(e.sinkT===0) hurt(e.pos, e.def.beam/2, x=>damageTarget(e,x,null,pos)); });
   allies.forEach(a=>{ if(a.sinkT===0) hurt(a.pos, a.def.beam/2, x=>damageAlly(a,x,pos)); });
-  landUnits.forEach(u=>{ if(!u.dead) hurt(u.pos, Math.max(3,(u.footprint||4)*.35), x=>{ u.hp-=x; if(u.hp<=0) killLandUnit(u); }); });
+  [...landUnits].forEach(u=>{ if(!u.dead) hurt(u.pos, Math.max(3,(u.footprint||4)*.35), x=>{ u.hp-=x;if(u.hp<=0)killLandUnit(u,massive); }); });
   [enemyHarbor,friendlyHarbor].forEach(h=>{ if(h&&h.hp>0) hurt(h.pos, h.r*0.5, x=>damageHarbor(h,x)); });
-  boom(pos, 0.6+rad*0.16);
+  if(massive)strategicBlastFx(pos,rad);else boom(pos,0.6+rad*0.16);
 }
 
 // =====================================================================
@@ -2899,8 +3039,9 @@ function updateShells(dt){
     if(s.team===0){
       for(const e of enemies){ if(e.sinkT>0)continue; if(s.mesh.position.distanceTo(e.pos)< e.def.beam/2+2){ onShellHit(s,e.pos.clone(),e); hit=true; break; } }
       if(!hit) for(const ep of aiPlanes){ if(ep.team!==1||ep.hp<=0)continue; if(s.mesh.position.distanceTo(ep.pos)<3.2){ ep.hp-=s.dmg; hitSpark(s.mesh.position.clone()); if(ep.hp<=0) killAIPlane(ep); hit=true; break; } }
-      if(!hit && s.mesh.position.y<20) for(const u of landUnits){ if(u.team!==1||u.dead)continue; if(s.mesh.position.distanceTo(u.pos)<Math.max(3.5,(u.footprint||4)*.38)){ u.hp-=s.dmg*wallShield(u); hitSpark(s.mesh.position.clone()); if(s.splash) explodeAt(s.mesh.position.clone(),0,s.dmg,s.splash,s.owner); if(u.hp<=0) killLandUnit(u); hit=true; break; } }
-      if(!hit && enemyHarbor && enemyHarbor.hp>0 && s.mesh.position.distanceTo(enemyHarbor.pos)<enemyHarbor.r){ damageHarbor(enemyHarbor,s.dmg); hitSpark(s.mesh.position.clone()); hit=true; }
+      if(!hit && s.mesh.position.y<20) for(const u of landUnits){ if(u.team!==1||u.dead)continue; if(s.mesh.position.distanceTo(u.pos)<Math.max(3.5,(u.footprint||4)*.38)){
+        if(s.strategic)blastAll(s.mesh.position.clone(),s.dmg,s.splash,true);else{u.hp-=s.dmg*wallShield(u);hitSpark(s.mesh.position.clone());if(s.splash)explodeAt(s.mesh.position.clone(),0,s.dmg,s.splash,s.owner);if(u.hp<=0)killLandUnit(u);}hit=true;break;} }
+      if(!hit && enemyHarbor && enemyHarbor.hp>0 && s.mesh.position.distanceTo(enemyHarbor.pos)<enemyHarbor.r){ if(s.strategic)blastAll(s.mesh.position.clone(),s.dmg,s.splash,true);else{damageHarbor(enemyHarbor,s.dmg);hitSpark(s.mesh.position.clone());}hit=true; }
     }
     else {
       const pp=player.pos.clone().setY(player.def.deckY); if(player.hp>0 && !(player.submerged && !s.water) && s.mesh.position.distanceTo(pp)< player.def.beam/2+3){ onShellHit(s,s.mesh.position.clone(),player); hit=true; }   // dived sub only takes torpedo hits
@@ -2909,17 +3050,19 @@ function updateShells(dt){
         hurtPlayerTank(drivingTank, s.dmg, s.mesh.position.clone().sub(s.vel), s.vel.y<-9); hitSpark(s.mesh.position.clone()); hit=true; } }  // your tank — armor facing from the shell's vector, top hit if plunging
       if(!hit) for(const ap of aiPlanes){ if(ap.team!==0||ap.hp<=0)continue; if(s.mesh.position.distanceTo(ap.pos)<3.2){ ap.hp-=s.dmg; hitSpark(s.mesh.position.clone()); if(ap.hp<=0) killAIPlane(ap); hit=true; break; } }
       if(!hit) for(const a of allies){ if(a.sinkT>0)continue; if(s.mesh.position.distanceTo(a.pos)< a.def.beam/2+2){ damageAlly(a,s.dmg,s.mesh.position.clone()); hitSpark(s.mesh.position.clone()); hit=true; break; } }
-      if(!hit && s.mesh.position.y<20) for(const u of landUnits){ if(u.team!==0||u.dead)continue; if(s.mesh.position.distanceTo(u.pos)<Math.max(3.5,(u.footprint||4)*.38)){ u.hp-=s.dmg*wallShield(u); hitSpark(s.mesh.position.clone()); if(u.hp<=0) killLandUnit(u); hit=true; break; } }
-      if(!hit && friendlyHarbor && friendlyHarbor.hp>0 && s.mesh.position.distanceTo(friendlyHarbor.pos)<friendlyHarbor.r){ damageHarbor(friendlyHarbor,s.dmg); hitSpark(s.mesh.position.clone()); hit=true; }
+      if(!hit && s.mesh.position.y<20) for(const u of landUnits){ if(u.team!==0||u.dead)continue; if(s.mesh.position.distanceTo(u.pos)<Math.max(3.5,(u.footprint||4)*.38)){
+        if(s.strategic)blastAll(s.mesh.position.clone(),s.dmg,s.splash,true);else{u.hp-=s.dmg*wallShield(u);hitSpark(s.mesh.position.clone());if(u.hp<=0)killLandUnit(u);}hit=true;break;} }
+      if(!hit && friendlyHarbor && friendlyHarbor.hp>0 && s.mesh.position.distanceTo(friendlyHarbor.pos)<friendlyHarbor.r){if(s.strategic)blastAll(s.mesh.position.clone(),s.dmg,s.splash,true);else{damageHarbor(friendlyHarbor,s.dmg);hitSpark(s.mesh.position.clone());}hit=true;}
     }
     if(!hit&&s.mesh.position.y<4)for(const m of mines){if(m.team===s.team||m.arm>0)continue;
       if(s.mesh.position.distanceTo(m.pos)<3.2){hitSpark(m.pos.clone().setY(1));detonateMine(m);hit=true;break;}}
-    if(!hit && s.mesh.position.y<0.3){ splashAt(s.mesh.position.clone(),1); if(s.splash) explodeAt(s.mesh.position.clone(),s.team,s.dmg,s.splash,s.owner); hit=true; }
+    if(!hit && s.mesh.position.y<0.3){ splashAt(s.mesh.position.clone(),s.strategic?8:1);if(s.strategic)blastAll(s.mesh.position.clone(),s.dmg,s.splash,true);else if(s.splash)explodeAt(s.mesh.position.clone(),s.team,s.dmg,s.splash,s.owner);hit=true;}
     if(hit||s.life<=0) removeShellAt(i);
   }
 }
 function onShellHit(s,pos,target){
-  if(s.splash) explodeAt(pos,s.team,s.dmg,s.splash,s.owner);
+  if(s.strategic)blastAll(pos,s.dmg,s.splash,true);
+  else if(s.splash) explodeAt(pos,s.team,s.dmg,s.splash,s.owner);
   else { damageTarget(target,s.dmg,s.owner,pos); boom(pos, 0.7); }
 }
 function keepOffIslands(pos,margin){ // push a ship out of any island / harbor footprint
@@ -2956,9 +3099,10 @@ function autoGun(pl,dt){
 }
 
 // ---------- AI aircraft (both sides) — each plane type fights its own way ----------
-const AI_PLANE_POOL=['fighter','divebomber','torpbomber','f18','a10','f22','b2','f35','p51','b17','f16','b52','spitfire','bf109','zero','stuka','p38','corsair']; // no helos for the AI
+const AI_PLANE_POOL=['fighter','divebomber','torpbomber','f18','a10','f22','b2','f35','p51','b17','b24','b36','halifax','pe8','he177','tu4','vulcan','tu16','m4bison','b58','victor','f16','b52','spitfire','bf109','zero','stuka','p38','corsair',
+  'm27','mh221','m42','mhkl235','ss17','p11','sp9r','a251','chicken3']; // fortress helos and nuclear aircraft remain player-only
 function planeProfile(def){ const b=def.bomb;
-  return { torp: !!(b&&b.kind==='torpedo'), miss: !!(b&&b.homing), bomber: !!(b&&b.kind!=='torpedo'&&!b.homing), fighter: !b }; }
+  return {torp:!!(b&&b.kind==='torpedo'),miss:!!(b&&b.homing),bomber:!!(b&&b.kind!=='torpedo'&&!b.homing),fighter:!!def.antiAirOnly||!b}; }
 function spawnAIPlane(src, team, forceDef){
   const def=forceDef||PLANES[AI_PLANE_POOL[Math.floor(Math.random()*AI_PLANE_POOL.length)]];
   const bodyCol = team===1?0x8a6a6a:0x6a78a0;
@@ -2967,9 +3111,9 @@ function spawnAIPlane(src, team, forceDef){
   const ang=Math.random()*6.28, pos=src.pos.clone().add(new THREE.Vector3(Math.cos(ang)*30,34+Math.random()*14,Math.sin(ang)*30));
   const marker=teamMarker(team,7); scene.add(marker);
   aiPlanes.push({ def, team, group:g, pos, heading:Math.random()*6.28, hp:def.hp, maxhp:def.hp, marker,
-    prof:planeProfile(def), bombs:def.bombs||0, fireT:1.2+Math.random()*1.6, ordT:1+Math.random()*2,
-    t:Math.random()*6, prop:g.userData.prop, state:'ingress', stateT:0, breakDir:Math.random()<0.5?1:-1, jink:0, jinkT:0,
-    suicide: team===1 && Math.random()<0.16 });
+    prof:planeProfile(def),bombs:def.bombs||0,gunAmmo:def.gunAmmo==null?null:def.gunAmmo,fireT:1.2+Math.random()*1.6,ordT:1+Math.random()*2,
+    t:Math.random()*6, prop:g.userData.prop, props:g.userData.props, state:'ingress', stateT:0, breakDir:Math.random()<0.5?1:-1, jink:0, jinkT:0,
+    suicide:!!def.kamikazeDamage||(team===1&&Math.random()<0.16) });
 }
 function updateAIPlane(p,dt){
   p.t+=dt; p.stateT+=dt;
@@ -2997,8 +3141,8 @@ function updateAIPlane(p,dt){
   desired+=p.jink;
   if(Math.hypot(p.pos.x,p.pos.z)>5200){ desired=Math.atan2(-p.pos.x,-p.pos.z); }
   let dh=desired-p.heading; while(dh>Math.PI)dh-=6.283; while(dh<-Math.PI)dh+=6.283;
-  const tr=p.state==='attack'?1.6:2.1; p.heading+=Math.max(-tr*dt,Math.min(tr*dt,dh));
-  const sp=p.def.shape==='jet'?80:p.def.shape==='attack'?56:54;
+  const tr=(p.def.turn||1.4)*(p.state==='attack'?1:1.18);p.heading+=Math.max(-tr*dt,Math.min(tr*dt,dh));
+  const sp=p.def.speed||(p.def.shape==='jet'?80:p.def.shape==='attack'?56:54);
   p.pos.x+=Math.sin(p.heading)*sp*dt; p.pos.z+=Math.cos(p.heading)*sp*dt;
   p.vel=new THREE.Vector3(Math.sin(p.heading)*sp,0,Math.cos(p.heading)*sp);
   if(p.marker) p.marker.position.set(p.pos.x, p.pos.y+5.5, p.pos.z);
@@ -3006,20 +3150,22 @@ function updateAIPlane(p,dt){
   const bank=Math.max(-0.8,Math.min(0.8,-dh*3));
   p.group.position.copy(p.pos); p.group.rotation.set(p.state==='attack'?0.22:(p.state==='break'?-0.18:0), p.heading, bank);
   if(p.prop) p.prop.rotation.z+=dt*40;
+  if(p.props)p.props.forEach((pr,i)=>pr.rotation.z+=dt*34*(i%2?-1:1));
+  if(p.group.userData.burners)p.group.userData.burners.forEach(b=>b.scale.setScalar(.75+Math.random()*.45));
   if(p.group.userData.rotor) p.group.userData.rotor.rotation.y+=dt*30;
   // kamikaze: a low plane on top of an enemy ship rams it
   if(p.pos.y<13){ for(const s of shipsOf(foe)){ const sp2=(s===player); if((sp2?player.hp:s.hp)<=0)continue;
-      if(Math.hypot(p.pos.x-s.pos.x,p.pos.z-s.pos.z)<(s.def.beam/2)+5){ if(sp2) damageTarget(player,90,null); else if(s.team===0) damageAlly(s,90); else damageTarget(s,90,null); killAIPlane(p); return; } } }
+      if(Math.hypot(p.pos.x-s.pos.x,p.pos.z-s.pos.z)<(s.def.beam/2)+5){const kd=p.def.kamikazeDamage||90;if(sp2)damageTarget(player,kd,null);else if(s.team===0)damageAlly(s,kd);else damageTarget(s,kd,null);killAIPlane(p);return;} } }
   // --- weapons: use THIS plane's actual armament ---
   const lined=Math.abs(dh)<0.5;
   if(p.state==='attack'){
     p.fireT-=dt; p.ordT-=dt;
     const from=p.pos.clone();
     // strafing guns (every type that has them)
-    if(p.def.guns && p.fireT<=0 && lined && dist<150 && (tgtAir||p.pos.y<atkY+10)){ p.fireT=0.6+Math.random()*0.7;
+    if(p.def.guns&&p.fireT<=0&&lined&&dist<150&&(tgtAir||p.pos.y<atkY+10)&&(p.gunAmmo==null||p.gunAmmo>0)){p.fireT=0.6+Math.random()*0.7;if(p.gunAmmo!=null)p.gunAmmo--;
       const aimY=tgtAir?tgtPos.y:tgtY; const dir=tgtPos.clone().setY(aimY).sub(from).normalize();
       const gw={...p.def.guns, col: p.team===1?0xff6a4a:0x70b0ff};
-      spawnShell(gw, from, dir, p.team, p); }
+      spawnShell(gw,from,aircraftGunDir(dir,gw),p.team,p); }
     // ordnance — depends on plane type
     if(p.def.bomb && p.bombs>0 && p.ordT<=0 && lined){ const b=p.def.bomb;
       if(pr.miss && dist<(b.range||240)){ p.ordT=1.4+Math.random(); p.bombs--;
@@ -3186,10 +3332,10 @@ function teslaBolt(a,b){
   scene.add(m); fx.push({mesh:m,life:0.12,fade:true});
   const l=new THREE.PointLight(0x6ac0ff,3,30); l.position.copy(b); scene.add(l); fx.push({mesh:l,life:0.12,light:true,li:18});
 }
-function killLandUnit(u){
-  u.dead=true; explodeAt(u.pos.clone().setY(1.5),0,0,4,null);
+function killLandUnit(u,quiet=false){
+  u.dead=true;if(!quiet)explodeAt(u.pos.clone().setY(1.5),0,0,4,null);
   if(u.radar) _radar[u.team]=Math.max(0,_radar[u.team]-1);
-  if((u.ammo||u.fuel)&&u.island){blastAll(u.pos.clone().setY(5),u.ammo?180:145,u.ammo?42:36);}
+  if(!quiet&&(u.ammo||u.fuel)&&u.island){blastAll(u.pos.clone().setY(5),u.ammo?180:145,u.ammo?42:36);}
   if(u.command&&u.island&&u.island.owner===u.team){
     setIslandOwner(u.island,null,true);flashPrompt('⚠ '+u.island.name.toUpperCase()+' COMMAND POST DESTROYED — ISLAND NEUTRALIZED');
   }
@@ -3246,7 +3392,7 @@ function updateHarbors(dt){
             else if(c.radar>0)c.radar=0; else if(c.deck>0)c.deck=0; } } } }); }
     // aircraft hangar — rearm YOUR parked planes near your harbor (player only)
     if(mine && h.up.hangar>0 && player.pos.distanceTo(h.pos)<150){ h.rearmT=(h.rearmT||0)+dt;
-      if(h.rearmT>=1.4-h.up.hangar*0.3){ h.rearmT=0; planes.forEach(p=>{ if(p.parked && p.def.bombs && p.bombsLeft<p.def.bombs) p.bombsLeft++; }); } }
+      if(h.rearmT>=1.4-h.up.hangar*0.3){ h.rearmT=0; planes.forEach(p=>{if(p.parked&&p.def.bombs&&!p.def.strategicBomb&&p.bombsLeft<p.def.bombs)p.bombsLeft++;if(p.parked&&p.def.gunAmmo!=null)p.gunAmmo=Math.min(p.def.gunAmmo,(p.gunAmmo||0)+12);}); } }
   });
   aiHarborTick(dt);
   aiIslandBuild(dt);
@@ -3345,8 +3491,9 @@ function updatePrompt(){
     if(piloting.phase==='takeoff') msg='Taking off…';
     else if(piloting.phase==='landing') msg='Landing — line up OVER the ship and descend · E to abort';
     else { const heli=piloting.plane.def.heli; const b=piloting.plane.def.bomb?`   ·   Space drop (${piloting.plane.bombsLeft})`:'';
+      const ga=piloting.plane.gunAmmo==null?'':`   ·   Gun ammo ${piloting.plane.gunAmmo}`;
       const f=Math.ceil(piloting.fuel/piloting.fuelMax*100); const eng = !piloting.engineOn ? '   ·   ⚠ ENGINE OUT' : (f<25?'   ·   ⚠ LOW FUEL':'');
-      msg=(heli?'W/S fwd · A/D turn · Mouse = climb/descend':'W/S throttle · A/D turn · Mouse = pitch')+' · Click guns'+b+`   ·   Fuel ${f}%`+eng+(piloting.parts?partSummary(piloting):'')+'   ·   V view · E to land'; }
+      msg=(heli?'W/S fwd · A/D turn · Mouse = climb/descend':'W/S throttle · A/D turn · Mouse = pitch')+' · Click guns'+ga+b+`   ·   Fuel ${f}%`+eng+(piloting.parts?partSummary(piloting):'')+'   ·   V view · E to land'; }
   }
   else if(!manning && !shopOpen && !harborOpen){
     const tu=nearestTurret(), pa=nearestPlane(), hm=nearestHelm(), dtk=nearestDeckTank();
