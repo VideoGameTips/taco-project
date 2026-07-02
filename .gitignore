@@ -4,6 +4,7 @@
 # …except the battle simulator files.
 !/battle-sim.html
 !/index.html
+!/iron-tide.html
 !/battleship.html
 !/mech-battles.html
 !/README.md
