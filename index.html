@@ -367,7 +367,26 @@ const ownedGuns=new Set(['pistol']);   // the pistol is always on hand
 
 // ---------- three setup ----------
 let renderer, scene, camera, clock, sun, hemi;
-const SILVER = c=>new THREE.MeshStandardMaterial({ color:c||0xc2c6cc, metalness:0.72, roughness:0.42 });
+const _surfaceMaps={};
+function surfaceMap(kind='metal'){
+  if(_surfaceMaps[kind])return _surfaceMaps[kind];
+  const s=96,c=document.createElement('canvas');c.width=c.height=s;const x=c.getContext('2d'),im=x.createImageData(s,s);
+  for(let i=0;i<s*s;i++){const n=Math.random(),base=kind==='ground'?205:kind==='concrete'?218:kind==='paint'?238:232,
+    grain=(n-.5)*(kind==='ground'?46:kind==='concrete'?34:kind==='paint'?14:22);
+    im.data[i*4]=im.data[i*4+1]=im.data[i*4+2]=Math.max(150,Math.min(255,base+grain));im.data[i*4+3]=255;}
+  x.putImageData(im,0,0);
+  if(kind==='metal'||kind==='paint'){x.strokeStyle=kind==='paint'?'rgba(40,45,48,.14)':'rgba(25,30,34,.22)';x.lineWidth=1;
+    for(let p=0;p<=s;p+=24){x.beginPath();x.moveTo(p,0);x.lineTo(p,s);x.stroke();x.beginPath();x.moveTo(0,p);x.lineTo(s,p);x.stroke();}
+    x.fillStyle='rgba(30,34,37,.28)';for(let py=4;py<s;py+=12)for(let px=4;px<s;px+=12){x.beginPath();x.arc(px,py,.7,0,6.283);x.fill();}}
+  if(kind==='concrete'){x.strokeStyle='rgba(65,62,55,.18)';for(let i=0;i<8;i++){let px=Math.random()*s,py=Math.random()*s;x.beginPath();x.moveTo(px,py);
+    for(let j=0;j<4;j++){px+=(Math.random()-.5)*18;py+=5+Math.random()*10;x.lineTo(px,py);}x.stroke();}}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(kind==='ground'?5:kind==='concrete'?3:2,kind==='ground'?5:kind==='concrete'?3:2);
+  _surfaceMaps[kind]=t;return t;
+}
+function surfaceMaterial(color,kind='metal',roughness=.55,metalness=0){
+  return new THREE.MeshStandardMaterial({color,map:surfaceMap(kind),roughness,metalness});
+}
+const SILVER = c=>surfaceMaterial(c||0xc2c6cc,'metal',0.42,0.72);
 function mkBox(w,h,d,m){ const x=new THREE.Mesh(new THREE.BoxGeometry(w,h,d), m.isMaterial?m:SILVER(m)); x.castShadow=x.receiveShadow=true; return x; }
 function mkCyl(rt,rb,h,m,seg=14){ const x=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg), m.isMaterial?m:SILVER(m)); x.castShadow=true; return x; }
 
@@ -944,15 +963,11 @@ function buildIsland(pos,r,name){
   const seed=Math.random()*20, long=isBase?1.28:1.2+Math.random()*0.42, short=isBase?0.95:0.92+Math.random()*0.16;
   const alongX=isBase||Math.random()<0.5, rx=r*(alongX?long:short), rz=r*(alongX?short:long), angle=isBase?0:(Math.random()-0.5)*1.35;
   g.rotation.y=angle;
-  const sand =new THREE.MeshStandardMaterial({color:0xcdb98a,roughness:0.95});
-  const grass=new THREE.MeshStandardMaterial({color:0x55753f,roughness:0.95});
-  const jung =new THREE.MeshStandardMaterial({color:0x2f5a30,roughness:1});
-  const jung2=new THREE.MeshStandardMaterial({color:0x3c6e38,roughness:1});
-  const bushM=new THREE.MeshStandardMaterial({color:0x33602c,roughness:1});
-  const trunkM=new THREE.MeshStandardMaterial({color:0x66472a,roughness:1});
-  const rockM=new THREE.MeshStandardMaterial({color:0x6a6a66,roughness:1});
-  const concM=new THREE.MeshStandardMaterial({color:0x787b70,roughness:0.95});
-  const bagM =new THREE.MeshStandardMaterial({color:0x9a8a5a,roughness:1});
+  const sand=surfaceMaterial(0xcdb98a,'ground',.98),grass=surfaceMaterial(0x55753f,'ground',.97),
+    jung=surfaceMaterial(0x2f5a30,'ground',1),jung2=surfaceMaterial(0x3c6e38,'ground',1),
+    bushM=surfaceMaterial(0x33602c,'ground',1),trunkM=surfaceMaterial(0x66472a,'ground',1),
+    rockM=surfaceMaterial(0x6a6a66,'concrete',1),concM=surfaceMaterial(0x787b70,'concrete',.95),
+    bagM=surfaceMaterial(0x9a8a5a,'ground',1);
   const darkM=new THREE.MeshStandardMaterial({color:0x15190f,roughness:1});
   const beach=new THREE.Mesh(islandGeometry(rx,rz,2.2,seed,1.15), sand); beach.position.y=0.2; beach.receiveShadow=true; g.add(beach);
   const top=new THREE.Mesh(islandGeometry(rx*0.84,rz*0.84,1.6,seed+0.15,1.08), grass); top.position.y=1.3; top.receiveShadow=true; g.add(top);
@@ -1020,7 +1035,7 @@ function buildHarbor(team,pos){
   const g=new THREE.Group(); g.position.copy(pos);
   const tcol = team===0?0x3a6ea5:0xa54040;
   // concrete pier
-  const pier=mkBox(34,1.6,22,new THREE.MeshStandardMaterial({color:0x8a8f96,roughness:0.9,metalness:0.1})); pier.position.y=1.2; pier.receiveShadow=true; g.add(pier);
+  const pier=mkBox(34,1.6,22,surfaceMaterial(0x8a8f96,'concrete',.9,.1)); pier.position.y=1.2; pier.receiveShadow=true; g.add(pier);
   // warehouses + crane + control tower (team-tinted)
   const wh=mkBox(10,5,8,SILVER(0x9aa0a8)); wh.position.set(-8,4.2,-4); g.add(wh);
   const wh2=mkBox(8,4,7,SILVER(0x9aa0a8)); wh2.position.set(6,3.6,-5); g.add(wh2);
@@ -1031,14 +1046,14 @@ function buildHarbor(team,pos){
   const cmast=mkBox(0.8,10,0.8,SILVER(0x6a7078)); cmast.position.set(0,6,8); g.add(cmast);
   const carm=mkBox(0.6,0.6,12,SILVER(0x6a7078)); carm.position.set(0,10,4); g.add(carm);
   // --- seawall ringing the harbor, with a gap opening toward the open sea ---
-  const wallM=new THREE.MeshStandardMaterial({color:0x787f86,roughness:0.95}), capM=SILVER(tcol);
+  const wallM=surfaceMaterial(0x787f86,'concrete',.95),capM=SILVER(tcol);
   const RW=30, NSEG=18, gapAng=pos.z>0?-Math.PI/2:Math.PI/2, segLen=(6.283*RW/NSEG)*1.06;
   for(let i=0;i<NSEG;i++){ const a=i/NSEG*6.283; const da=Math.atan2(Math.sin(a-gapAng),Math.cos(a-gapAng)); if(Math.abs(da)<0.62) continue;
     const seg=mkBox(segLen,3,1.6,wallM); seg.position.set(Math.cos(a)*RW,1.5,Math.sin(a)*RW); seg.rotation.y=-a; seg.receiveShadow=true; g.add(seg);
     const cap=mkBox(segLen,0.4,1.95,capM); cap.position.set(Math.cos(a)*RW,3.1,Math.sin(a)*RW); cap.rotation.y=-a; g.add(cap); }
   // --- animated dry dock that builds a ship ---
   const dock=new THREE.Group(); dock.position.set(-23,0,0); g.add(dock);
-  const basin=mkBox(11,1,26,new THREE.MeshStandardMaterial({color:0x3f474e,roughness:0.95})); basin.position.y=0.55; dock.add(basin);
+  const basin=mkBox(11,1,26,surfaceMaterial(0x3f474e,'concrete',.95)); basin.position.y=0.55; dock.add(basin);
   for(const sx of [-1,1]){ const rail=mkBox(0.7,4,26,SILVER(0x6a7078)); rail.position.set(sx*5,2.6,0); dock.add(rail); }
   const beam=mkBox(11,0.7,1.4,SILVER(0x7a828a)); beam.position.set(0,4.7,0); dock.add(beam);
   const trolley=mkBox(2.4,1.3,2.2,SILVER(0xb0b6be)); trolley.position.set(0,4.1,0); dock.add(trolley);
@@ -1073,7 +1088,7 @@ const TANKS = {
 };
 function addIslandBuildingGraphicDetails(g,kind,team){
   if(!STRUCTS[kind])return;
-  const teamCol=team===0?0x398fc8:0xb43d3d,conc=new THREE.MeshStandardMaterial({color:0x686d66,roughness:.96}),
+  const teamCol=team===0?0x398fc8:0xb43d3d,conc=surfaceMaterial(0x686d66,'concrete',.96),
     dark=SILVER(0x30373c),trim=new THREE.MeshStandardMaterial({color:teamCol,roughness:.7});
   if(!['airstrip','helipad','bridge','dock','wall'].includes(kind)){
     const fp=Math.min(16,(STRUCTS[kind].footprint||20)/(STRUCTS[kind].scale||2.5)*1.35);
@@ -1126,6 +1141,10 @@ function buildLand(kind,team,pos,type){
     for(const sx of [-1,1]){ const fend=mkBox(0.55,0.08,T.hullL*1.02,SILVER(0x2a2e22)); fend.position.set(sx*(T.hullW/2+0.18),1.02,0); g.add(fend); }
     const exh=mkCyl(0.1,0.1,0.7,SILVER(0x222)); exh.rotation.z=Math.PI/2; exh.position.set(T.hullW*0.4,0.95,-T.hullL*0.48); g.add(exh);
     const ant=mkCyl(0.02,0.02,1.6,SILVER(0x111)); ant.position.set(-T.turW*0.35,0.9,-T.turL*0.3); tur.add(ant);
+    const lights=mkBox(T.hullW*.62,.11,.08,new THREE.MeshStandardMaterial({color:0xffe3a0,emissive:0xffc45a,emissiveIntensity:.65}));
+    lights.position.set(0,1.12,T.hullL*.505);g.add(lights);
+    const stow=mkBox(T.hullW*.55,.48,.55,body);stow.position.set(0,1.17,-T.hullL*.46);g.add(stow);
+    const tow=new THREE.Mesh(new THREE.TorusGeometry(T.hullW*.25,.045,6,18,Math.PI),SILVER(0x3b3328));tow.rotation.x=Math.PI/2;tow.position.set(0,.94,T.hullL*.51);g.add(tow);
     range=T.range; dmg=T.dmg; hp=T.hp; fireRate=T.fireRate; g.userData.barrelLen=T.barL; g.userData.tank=T;
   } else if(kind==='coastal'){
     const base=mkBox(4,2.4,4,new THREE.MeshStandardMaterial({color:0x8a8f96,roughness:0.9})); base.position.y=1.2; g.add(base);
@@ -1265,8 +1284,19 @@ function buildLand(kind,team,pos,type){
 // =====================================================================
 function buildTurret(def){
   const g=new THREE.Group(); const sz=def.size||1; const m=SILVER(def.col);
-  const base=mkCyl(0.7*sz,0.85*sz,0.4*sz,m); base.position.y=0.2*sz; g.add(base);
-  const yawG=new THREE.Group(); yawG.position.y=0.4*sz; g.add(yawG); g.userData.yawG=yawG;
+  // Light open mounts need a waist-high pedestal. Without it, half-scale guns such
+  // as the M2 sit almost flush with the deck and disappear below the walking POV.
+  // The pedestal shrinks smoothly as the weapon gets larger, so every gun remains
+  // seated on its actual deck/terrain surface rather than being floated upward.
+  const pedestalH=def.kind==='gun'&&sz<0.75 ? Math.max(0,(0.78-sz)*1.8) : 0;
+  if(pedestalH>0){
+    const foot=mkCyl(0.62*sz,0.78*sz,0.12*sz,m);foot.position.y=0.06*sz;g.add(foot);
+    const post=mkCyl(0.25*sz,0.38*sz,pedestalH,m);post.position.y=0.12*sz+pedestalH*0.5;g.add(post);
+    const collar=mkCyl(0.42*sz,0.32*sz,0.14*sz,m);collar.position.y=pedestalH+0.1*sz;g.add(collar);
+  }
+  const base=mkCyl(0.7*sz,0.85*sz,0.4*sz,m); base.position.y=pedestalH+0.2*sz; g.add(base);
+  const yawG=new THREE.Group(); yawG.position.y=pedestalH+0.4*sz; g.add(yawG); g.userData.yawG=yawG;
+  g.userData.pedestalH=pedestalH;
   let housing, pitchG=new THREE.Group();
   if(def.kind==='torpedo'){
     housing=mkBox(0.9*sz,0.5*sz,1.6*sz,m); housing.position.y=0.25*sz; yawG.add(housing);
@@ -1302,7 +1332,7 @@ function buildTurret(def){
 }
 
 function aircraftSkin(col){
-  return new THREE.MeshStandardMaterial({color:col,metalness:.42,roughness:.38,envMapIntensity:.7});
+  const m=surfaceMaterial(col,'paint',.38,.42);m.envMapIntensity=.7;return m;
 }
 function aircraftFuselage(length,radius,mat,slender=1){
   const L=length/2,r=radius,pts=[
@@ -1406,6 +1436,18 @@ function setAircraftControlSurfaces(group,roll,pitch){
   (group.userData.ailerons||[]).forEach((a,i)=>a.rotation.x=(i?1:-1)*r);
   (group.userData.elevators||[]).forEach(e=>e.rotation.x=-p);
 }
+function addAircraftInterior(g,def,shape,length){
+  const heavy=shape==='heavyprop'||shape==='heavyjet',heli=shape==='heli',z=heli?(def.flyingFortress?2.65:1.78):(heavy?4.35:1.55),
+    width=heli?(def.flyingFortress?1.8:.95):(heavy?1.25:.82),dark=surfaceMaterial(0x171d21,'metal',.6,.35);
+  const panel=navalBlock(width,.42,.16,dark,.9);panel.position.set(0,heli?.08:.2,z);panel.rotation.x=-.12;g.add(panel);
+  const cols=[0x66d9ff,0x8cff7a,0xffc95c];
+  for(let i=0;i<3;i++){const lamp=new THREE.Mesh(new THREE.CircleGeometry(.085,12),new THREE.MeshBasicMaterial({color:cols[i],transparent:true,opacity:.9,side:THREE.DoubleSide}));
+    lamp.rotation.y=Math.PI;lamp.position.set((i-1)*width*.25,heli?.12:.24,z-.086);g.add(lamp);}
+  const hud=new THREE.Mesh(new THREE.PlaneGeometry(width*.48,.38),new THREE.MeshBasicMaterial({color:0x5de2b2,transparent:true,opacity:.12,side:THREE.DoubleSide,depthWrite:false}));
+  hud.rotation.y=Math.PI;hud.position.set(0,heli?.53:.62,z+.12);g.add(hud);
+  for(const sx of[-1,1]){const frame=mkBox(.055,.8,.055,dark);frame.position.set(sx*width*.48,heli?.48:.55,z+.02);frame.rotation.z=-sx*.22;g.add(frame);}
+  g.userData.cockpitPanel=panel;
+}
 // ---------- smoother procedural aircraft builder: unified airframes, tapered bodies, real layouts ----------
 function buildPlane(def){
   const g=new THREE.Group(),shape=def.shape||'prop',m=aircraftSkin(def.col),dark=aircraftSkin(0x31383f),
@@ -1436,7 +1478,8 @@ function buildPlane(def){
     const engines=single?[0]:[-.3,.3];g.userData.burners=[];
     engines.forEach(x=>{const nac=aircraftFuselage(2.15,.27,dark);nac.position.set(x,-.04,-length*.3);g.add(nac);
       const noz=mkCyl(.23,.18,.44,intakeMat,18);noz.rotation.x=Math.PI/2;noz.position.set(x,-.04,-length*.52);g.add(noz);addJetFlame(x,-.04,-length*.59,.17);});
-    const tails=single?[0]:[-.62,.62];tails.forEach((x,i)=>{const fin=addFin(x,.15,-length*.37,1.05,1.25,.45,.45);fin.rotation.z=single?0:(i?-.2:.2);});
+    const tails=single?[0]:[-.62,.62];tails.forEach((x,i)=>{const fin=addFin(x,.15,-length*.37,1.05,1.25,.45,.45);
+      fin.rotation.z=Math.PI/2+(single?0:(i?-.2:.2));});
     for(const sx of[-1,1]){const intake=new THREE.Mesh(new THREE.CylinderGeometry(.28,.4,1.15,16,1,false,0,Math.PI),intakeMat);
       intake.rotation.set(Math.PI/2,0,sx<0?Math.PI:0);intake.position.set(sx*.5,-.07,length*.09);g.add(intake);}
   }else if(shape==='attack'&&def.name.includes('P-38')){
@@ -1447,7 +1490,7 @@ function buildPlane(def){
     for(const sx of[-1,1]){const boom=aircraftFuselage(length,.34,m);boom.position.set(sx*2.05,0,-.2);g.add(boom);
       const cowl=aircraftFuselage(1.35,.46,dark);cowl.position.set(sx*2.05,0,length*.28);g.add(cowl);
       const prop=aircraftPropeller(1.18,3,intakeMat);prop.position.set(sx*2.05,0,length*.41);g.add(prop);g.userData.props.push(prop);
-      const fin=addFin(sx*2.05,.12,-length*.48,1.05,1.1,.4,.15);fin.rotation.z=sx*.04;}
+      const fin=addFin(sx*2.05,.12,-length*.48,1.05,1.1,.4,.15);fin.rotation.z=Math.PI/2+sx*.04;}
     const tail=aircraftWingSet(g,4.25,.85,.55,.05,.11,m,-length*.46,.2);g.userData.wingL=g.userData.wingL||tail[0];g.userData.wingR=g.userData.wingR||tail[1];
   }else if(shape==='attack'){
     span=10.2;length=6.6;
@@ -1458,7 +1501,7 @@ function buildPlane(def){
     g.userData.burners=[];
     for(const sx of[-1,1]){const eng=aircraftFuselage(2.0,.48,dark);eng.position.set(sx*.98,.48,-length*.27);g.add(eng);
       const intake=mkCyl(.38,.48,.22,intakeMat,20);intake.rotation.x=Math.PI/2;intake.position.set(sx*.98,.48,-length*.1);g.add(intake);addJetFlame(sx*.98,.48,-length*.48,.2);
-      const fin=addFin(sx*1.12,.46,-length*.42,.9,.85,.34,.08);fin.rotation.z=sx*.04;}
+      const fin=addFin(sx*1.12,.46,-length*.42,.9,.85,.34,.08);fin.rotation.z=Math.PI/2+sx*.04;}
     const gun=mkCyl(.12,.15,1.4,intakeMat,12);gun.rotation.x=Math.PI/2;gun.position.set(0,-.2,length*.51);g.add(gun);
   }else if(shape==='heli'){
     const fortress=!!def.flyingFortress;span=fortress?8.2:5.4;length=fortress?8.4:7;
@@ -1532,7 +1575,7 @@ function buildPlane(def){
   if(def.gunCount&&shape!=='heli')for(let i=0;i<Math.min(8,def.gunCount);i++){const x=(i-(Math.min(8,def.gunCount)-1)/2)*.18,gun=mkCyl(.03,.04,1.05,intakeMat,10);
     gun.rotation.x=Math.PI/2;gun.position.set(x,-.1,length*.49);g.add(gun);}
   const pitot=shape==='heli'?null:mkCyl(.012,.018,.65,SILVER(0x20252a),8);if(pitot){pitot.rotation.x=Math.PI/2;pitot.position.set(0,0,length*.55);g.add(pitot);}
-  g.userData.airMeta={span,length,shape};addAircraftGraphicDetails(g,def,shape);
+  g.userData.airMeta={span,length,shape};addAircraftGraphicDetails(g,def,shape);addAircraftInterior(g,def,shape,length);
   if(def.scale)g.scale.setScalar(def.scale);
   g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
   return g;
@@ -1560,6 +1603,7 @@ function buildGunModel(gfx){
   const body=new THREE.MeshStandardMaterial({color:0x2b2f36,roughness:0.7,metalness:0.3});
   const metal=new THREE.MeshStandardMaterial({color:0x6a7078,roughness:0.5,metalness:0.6});
   const wood=new THREE.MeshStandardMaterial({color:0x6b4a2a,roughness:0.8});
+  const skin=new THREE.MeshStandardMaterial({color:0xb98262,roughness:.92}),sleeve=surfaceMaterial(0x263b4b,'ground',.94);
   const bx=(w,h,d,m,x,y,z)=>{ const e=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m||body); e.position.set(x,y,z); g.add(e); return e; };
   const cy=(r,h,m,x,y,z)=>{ const e=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,10),m||metal); e.rotation.x=Math.PI/2; e.position.set(x,y,z); g.add(e); return e; };
   if(gfx==='pistol'){ bx(0.07,0.1,0.26,body,0,0,-0.1); bx(0.06,0.16,0.07,body,0,-0.12,0.02); cy(0.022,0.18,metal,0,0.01,-0.24); }
@@ -1570,6 +1614,12 @@ function buildGunModel(gfx){
   else if(gfx==='lmg'){ bx(0.1,0.14,0.66,body,0,0,-0.28); bx(0.12,0.16,0.16,metal,0,-0.14,-0.06); cy(0.026,0.36,metal,0,0.03,-0.66); bx(0.02,0.18,0.02,metal,0.05,-0.2,-0.5); bx(0.02,0.18,0.02,metal,-0.05,-0.2,-0.5); }
   else if(gfx==='rpg'){ cy(0.06,0.8,body,0,0,-0.3); const w=new THREE.Mesh(new THREE.ConeGeometry(0.09,0.2,10),new THREE.MeshStandardMaterial({color:0x556070,roughness:0.6})); w.rotation.x=-Math.PI/2; w.position.set(0,0,-0.72); g.add(w); bx(0.04,0.14,0.06,wood,0,-0.12,0.0); }
   else { bx(0.07,0.1,0.3,body,0,0,-0.12); }
+  // First-person hands and sleeves anchor the weapon in the scene instead of leaving it floating.
+  const gripHand=new THREE.Mesh(new THREE.SphereGeometry(.075,12,8),skin);gripHand.scale.set(.8,1.25,.8);gripHand.position.set(.035,-.13,-.015);g.add(gripHand);
+  const supportZ=gfx==='pistol'?.02:gfx==='rpg'?-.38:-.3,supportHand=gripHand.clone();supportHand.position.set(-.055,-.075,supportZ);supportHand.rotation.z=.25;g.add(supportHand);
+  const armR=mkBox(.13,.14,.42,sleeve);armR.position.set(.11,-.21,.17);armR.rotation.set(-.3,.2,-.12);g.add(armR);
+  const armL=mkBox(.13,.14,.48,sleeve);armL.position.set(-.14,-.18,supportZ+.2);armL.rotation.set(-.48,-.28,.16);g.add(armL);
+  const frontSight=mkBox(.018,.055,.025,metal);frontSight.position.set(0,.075,gfx==='rpg'?-.67:gfx==='pistol'?-.23:-.55);g.add(frontSight);
   g.scale.setScalar(1.1);
   return g;
 }
@@ -1789,6 +1839,81 @@ function upgCost(k){ const u=HARBOR_UP[k]; return Math.round(u.cost*Math.pow(u.m
 function priceOf(cost){ return Math.max(1, Math.round(cost*(1 - 0.10*fU('discount')))); }   // discount applied to player buys
 const _radar=[0,0];                                                       // island radar-station count per team
 function controlledIslandCount(team){ return islands.reduce((n,i)=>n+(i.capturable&&i.owner===team?1:0),0); }
+// ===== WAR PACING — escalating enemy offensives, rotating bonus objectives, deck rearm =====
+let offensiveT=160+Math.random()*80, offensiveN=0, sessPlanes=0;
+let sideOb=null, sideObT=25;
+function updateWarPacing(dt){
+  // parked aircraft slowly rearm from the ship's magazine (strategic bombs excluded — no free nukes)
+  planes.forEach(p=>{ if(p.parked&&p.def.bombs&&!p.def.strategicBomb&&p.bombsLeft<p.def.bombs){
+      p.deckRearmT=(p.deckRearmT||0)+dt; if(p.deckRearmT>=5){ p.deckRearmT=0; p.bombsLeft++; } } else p.deckRearmT=0; });
+  // escalating offensives — announced surges that grow as the war drags on
+  offensiveT-=dt;
+  if(offensiveT<=0){ offensiveN++; offensiveT=170+Math.random()*80;
+    const n=Math.min(3+Math.floor(offensiveN/2),6);
+    if(enemies.length<12){ for(let i=0;i<n;i++) spawnEnemy();
+      flashPrompt('⚠ ENEMY OFFENSIVE — '+n+' warships inbound!'); sfxAlarm(); } }
+  // rotating side objectives with cash rewards
+  if(sideOb){ sideOb.t-=dt;
+    if(sideObProgress()>=sideOb.goal){ money+=sideOb.pay; updateHUD(); refreshShop(); sfxClick();
+      flashPrompt('✅ OBJECTIVE COMPLETE — +$'+sideOb.pay); sideOb=null; sideObT=35+Math.random()*25; }
+    else if(sideOb.t<=0){ flashPrompt('✖ Objective failed.'); sideOb=null; sideObT=40+Math.random()*30; }
+  } else { sideObT-=dt; if(sideObT<=0) newSideObjective(); }
+  // HUD line (lazy element under the objective banner)
+  let el=document.getElementById('sideob');
+  if(!el){ const parent=document.getElementById('objective');
+    if(parent){ el=document.createElement('div'); el.id='sideob';
+      el.style.cssText='margin-top:3px;font-size:11px;color:#ffd060;letter-spacing:1px;'; parent.appendChild(el); } }
+  if(el) el.textContent = sideOb ? ('★ '+sideOb.label+'  '+Math.min(sideOb.goal,sideObProgress())+'/'+sideOb.goal+' · '+Math.ceil(sideOb.t)+'s · $'+sideOb.pay) : '';
+}
+function sideObProgress(){ if(!sideOb) return 0;
+  return sideOb.kind==='sink'?sunk-sideOb.base : sideOb.kind==='planes'?sessPlanes-sideOb.base : controlledIslandCount(0)-sideOb.base; }
+function newSideObjective(){
+  const r=Math.random();
+  if(r<0.4)       sideOb={kind:'sink',   goal:3, t:150, pay:700, base:sunk,       label:'BONUS: sink 3 warships'};
+  else if(r<0.75) sideOb={kind:'planes', goal:3, t:120, pay:500, base:sessPlanes, label:'BONUS: down 3 aircraft'};
+  else            sideOb={kind:'capture',goal:1, t:240, pay:900, base:controlledIslandCount(0), label:'BONUS: capture an island'};
+  flashPrompt('★ NEW OBJECTIVE — '+sideOb.label+' ($'+sideOb.pay+')'); sfxClick();
+}
+// ===== SHIP COLLISIONS — hulls can't overlap; ramming detonates; AI steers clear =====
+function shipRadius(def){ return def.len*0.22 + def.beam*0.5; }
+function steerClearOfShips(me,myPos,myDef,desired){   // bend the desired heading away from nearby hulls
+  let adj=desired;
+  const scan=(o,opos,odef)=>{ if(o===me) return;
+    const dx=myPos.x-opos.x, dz=myPos.z-opos.z, d=Math.hypot(dx,dz);
+    const rr=(shipRadius(myDef)+shipRadius(odef))*2.4;
+    if(d<rr && d>0.01){ const away=Math.atan2(dx,dz);
+      let diff=away-adj; while(diff>Math.PI)diff-=6.283; while(diff<-Math.PI)diff+=6.283;
+      adj+=diff*Math.min(0.8,1-d/rr); } };
+  if(player&&player.hp>0&&!player.submerged) scan(player,player.pos,player.def);
+  allies.forEach(a=>{ if(a.sinkT===0) scan(a,a.pos,a.def); });
+  enemies.forEach(e=>{ if(e.sinkT===0) scan(e,e.pos,e.def); });
+  return adj;
+}
+function shipCollisions(dt){
+  const list=[];
+  if(player&&player.hp>0&&!player.submerged&&player.pos) list.push({s:player,pos:player.pos,def:player.def,pl:true});
+  allies.forEach(a=>{ if(a.sinkT===0) list.push({s:a,pos:a.pos,def:a.def,ally:true}); });
+  enemies.forEach(e=>{ if(e.sinkT===0) list.push({s:e,pos:e.pos,def:e.def}); });
+  for(let i=0;i<list.length;i++) for(let j=i+1;j<list.length;j++){
+    const A=list[i], B=list[j];
+    const dx=B.pos.x-A.pos.x, dz=B.pos.z-A.pos.z, d=Math.hypot(dx,dz);
+    const rr=shipRadius(A.def)+shipRadius(B.def);
+    if(d>=rr||d<0.01) continue;
+    const nx=dx/d, nz=dz/d, push=(rr-d)/2;                       // shove both hulls apart — no warping through
+    A.pos.x-=nx*push; A.pos.z-=nz*push; B.pos.x+=nx*push; B.pos.z+=nz*push;
+    if((A.s._ramCd||0)>0||(B.s._ramCd||0)>0) continue;           // one bang per second per hull
+    if(A.s.proxy||B.s.proxy) continue;                           // far-off simulated ships just get separated
+    A.s._ramCd=1.0; B.s._ramCd=1.0;
+    const va=A.s.vel||new THREE.Vector3(), vb=B.s.vel||new THREE.Vector3();
+    const rel=va.clone().sub(vb).length();
+    boom(new THREE.Vector3((A.pos.x+B.pos.x)/2, 3, (A.pos.z+B.pos.z)/2), 1+Math.min(1.6, rel*0.06));
+    const dmg=Math.min(70, 10+rel*2.2);
+    const hit=(E,mult)=>{ if(E.pl) damageTarget(player,dmg*mult,null); else if(E.ally) damageAlly(E.s,dmg*mult); else damageTarget(E.s,dmg*mult,null); };
+    hit(A, Math.min(2, B.def.len/A.def.len));                    // the lighter hull takes the worst of it
+    hit(B, Math.min(2, A.def.len/B.def.len));
+  }
+  list.forEach(E=>{ if(E.s._ramCd>0) E.s._ramCd-=dt; });
+}
 function activeRadarCount(team){return landUnits.reduce((n,u)=>n+(!u.dead&&u.team===team&&u.radar&&structurePowered(u)?1:0),0);}
 function teamRange(team){ return hU(team,'radar')*60 + activeRadarCount(team)*45 + controlledIslandCount(team)*35; } // territory also relays radar
 function islandOfPos(pos){ return islands.find(i=>insideIslandRange(pos,i,8))||null; }
@@ -1885,7 +2010,7 @@ addEventListener('keydown',e=>{
   if(e.code==='Backslash'&&!e.repeat)backslashMoneyCode();
   if(e.code==='KeyV'&&!e.repeat) deployPlayerMine();
   if(e.code==='KeyZ'&&!e.repeat) cycleDamageControl();
-  if(e.code==='KeyA' && !e.repeat) tryDispatchPlane();   // A next to a parked plane → AI pilot (single press, won't fire while held to walk)
+  if(e.code==='KeyY' && !e.repeat) tryDispatchPlane();   // Y next to a parked plane → AI pilot (was A, which strafing on deck kept triggering by accident)
   if(e.code==='KeyQ') cycleGun();                        // Q cycles your owned small arms while ashore
   if(e.code==='KeyX') deleteTurret();                    // X scraps the deck gun you're standing next to
   if(e.code==='KeyT'){ fpv=!fpv;   // T toggles first-person / cockpit view (V is taken by mines)
@@ -1950,6 +2075,13 @@ function makePlayerShip(shipId){
   player.helm=helmLocal; player.helmEye=new THREE.Vector3(helmLocal.x, def.deckY+3.4, helmLocal.z+0.2);
   const wheel=new THREE.Mesh(new THREE.TorusGeometry(0.42,0.06,8,16), SILVER(0x6a7078)); wheel.position.copy(helmLocal).add(new THREE.Vector3(0,0.9,0)); wheel.rotation.x=0.5; build.group.add(wheel);
   const console_=mkBox(1.2,0.9,0.5,SILVER(0x4a525a)); console_.position.copy(helmLocal).add(new THREE.Vector3(0,0.45,0)); build.group.add(console_);
+  const consoleFace=mkBox(1.05,.38,.05,SILVER(0x17242c));consoleFace.position.copy(helmLocal).add(new THREE.Vector3(0,.78,.28));consoleFace.rotation.x=-.35;build.group.add(consoleFace);
+  for(let i=0;i<3;i++){const gauge=new THREE.Mesh(new THREE.CircleGeometry(.105,14),new THREE.MeshBasicMaterial({color:i===1?0x74e0ff:0x9cff78,side:THREE.DoubleSide}));
+    gauge.rotation.y=Math.PI;gauge.position.copy(helmLocal).add(new THREE.Vector3((i-1)*.31,.82,.315));build.group.add(gauge);}
+  const throttleBase=mkBox(.28,.18,.48,SILVER(0x30383e));throttleBase.position.copy(helmLocal).add(new THREE.Vector3(.78,.35,0));build.group.add(throttleBase);
+  for(const x of[.7,.86]){const lever=mkCyl(.035,.035,.55,SILVER(0x191d20),8);lever.position.copy(helmLocal).add(new THREE.Vector3(x,.72,.02));lever.rotation.x=-.38;build.group.add(lever);}
+  const compass=new THREE.Mesh(new THREE.SphereGeometry(.2,12,8),new THREE.MeshStandardMaterial({color:0x1d2c33,emissive:0x3a8794,emissiveIntensity:.45,roughness:.2}));
+  compass.position.copy(helmLocal).add(new THREE.Vector3(-.78,.53,.02));build.group.add(compass);
   const hmark=new THREE.Mesh(new THREE.TorusGeometry(0.85,0.09,8,20), new THREE.MeshStandardMaterial({color:0xffd060,emissive:0xc09020,emissiveIntensity:0.8,transparent:true,opacity:0.8}));
   hmark.rotation.x=-Math.PI/2; hmark.position.copy(helmLocal); build.group.add(hmark); player.helmMark=hmark;
   const ns = def.kind==='carrier'?4:2, dy=def.deckY+(def.kind==='carrier'?0.55:0.3);
@@ -2555,6 +2687,7 @@ function updateAlly(a,dt){
     desired = dP>stand+45?bearing : dP<stand-45?bearing+Math.PI : bearing+Math.PI/2*a.orbitDir; }
   else desired=bearing; // steam toward the enemy harbor
   a.turnT-=dt; if(a.turnT<=0){ a.jink=(Math.random()-0.5)*0.4; a.turnT=2.5+Math.random()*3; } desired+=a.jink||0;
+  desired=steerClearOfShips(a,a.pos,a.def,desired);   // don't sail into friendly or enemy hulls
   let dh=desired-a.heading; while(dh>Math.PI)dh-=6.283; while(dh<-Math.PI)dh+=6.283;
   const turnRate=a.def.boss ? 0.24 : a.def.len>70?0.45:0.8; a.heading+=Math.max(-turnRate*dt,Math.min(turnRate*dt,dh));
   const sp=(a.def.boss?6.5:a.def.kind==='scout'?15:a.def.len>70?9:13)*engineFactor(a); a.pos.x+=Math.sin(a.heading)*sp*dt; a.pos.z+=Math.cos(a.heading)*sp*dt;
@@ -3266,6 +3399,11 @@ function muzzleFlash(pos){
 function splashAt(pos,scale){
   const s=new THREE.Mesh(new THREE.ConeGeometry(1.2*scale,3*scale,10,1,true), new THREE.MeshBasicMaterial({color:0xcfeaff,transparent:true,opacity:0.7,side:THREE.DoubleSide}));
   s.position.copy(pos).setY(1.4*scale); scene.add(s); fx.push({mesh:s,life:0.5,fade:true,vel:new THREE.Vector3(0,3,0)});
+  const plumes=Math.min(2,Math.max(0,Math.floor(scale)));
+  for(let i=0;i<plumes;i++){const p=new THREE.Mesh(new THREE.ConeGeometry(.35*scale,2.2*scale,7,1,true),
+      new THREE.MeshBasicMaterial({color:0xeaf8ff,transparent:true,opacity:.6,side:THREE.DoubleSide,depthWrite:false}));
+    p.position.copy(pos).add(new THREE.Vector3((i?1:-1)*scale*.55,scale*1.1,(Math.random()-.5)*scale));p.rotation.z=(i?1:-1)*.2;scene.add(p);
+    fx.push({mesh:p,life:.42,fade:true,vel:new THREE.Vector3((i?1:-1)*scale,4+scale,0)});}
   if(ringGeo){ const rp=new THREE.Mesh(ringGeo,new THREE.MeshBasicMaterial({color:0xdff2fa,transparent:true,opacity:0.45,depthWrite:false}));   // expanding water ripple
     rp.position.set(pos.x,0.65,pos.z); rp.scale.setScalar(1.6*scale); scene.add(rp);
     fx.push({mesh:rp,life:0.6,max:0.6,op:0.45,fade:true,grow:true,growRate:6}); }
@@ -3453,8 +3591,10 @@ function update(dt,t){
   for(let i=enemies.length-1;i>=0;i--){ if(enemies[i].dead){ destroyShipVisual(enemies[i]); enemies.splice(i,1); } }
   const enemyReinforceRate=(0.18/2.25)*(1+hU(1,'fastBuild')*0.6+hU(1,'slots')*0.35); // another 1.5× slower with bosses in the theater
   if(Math.random()<dt*enemyReinforceRate) spawnEnemy();
+  updateWarPacing(dt);   // escalating enemy offensives + rotating bonus objectives + parked-plane rearm
   // --- friendly fleet — identical NPC reinforcement and destruction rules ---
   allies.forEach(a=>updateAlly(a,dt));
+  shipCollisions(dt);   // hulls repel, rams detonate
   for(let i=allies.length-1;i>=0;i--){ if(allies[i].dead){ destroyShipVisual(allies[i]); allies.splice(i,1); } }
   const allyReinforceRate=(0.18/2.25)*(1+hU(0,'fastBuild')*0.6+hU(0,'slots')*0.35);
   if(Math.random()<dt*allyReinforceRate) spawnAlly();
@@ -3643,6 +3783,7 @@ function updateEnemy(e,dt){
   // occasional jink so they aren't perfectly predictable
   e.turnT-=dt; if(e.turnT<=0){ e.jink=(Math.random()-0.5)*0.5; e.turnT=2.5+Math.random()*3; }
   desired+=e.jink||0;
+  desired=steerClearOfShips(e,e.pos,e.def,desired);   // don't sail into other hulls
   // soft world bound
   if(Math.hypot(e.pos.x,e.pos.z)>380){ desired=Math.atan2(-e.pos.x,-e.pos.z); }
   let dh=desired-e.heading; while(dh>Math.PI)dh-=6.283; while(dh<-Math.PI)dh+=6.283;
@@ -3840,7 +3981,7 @@ function killAIPlane(p){
   for(let i=0;i<8;i++){ const d=mkBox(0.4,0.4,0.4,SILVER(0x6a7078)); d.position.copy(p.pos); scene.add(d);
     fx.push({mesh:d,life:0.9,fade:true,vel:new THREE.Vector3((Math.random()-0.5)*12,Math.random()*6,(Math.random()-0.5)*12)}); }
   destroyObject3D(p.group); destroyObject3D(p.marker); const i=aiPlanes.indexOf(p); if(i>=0) aiPlanes.splice(i,1);
-  if(p.team===1){ money+=120; warRecord('planes'); updateHUD(); refreshShop(); }   // only downed enemy planes pay out
+  if(p.team===1){ money+=120; warRecord('planes'); sessPlanes++; updateHUD(); refreshShop(); }   // only downed enemy planes pay out
 }
 // ---------- land units (coastal guns / flak / tanks / soldiers, both teams) ----------
 function updateSupportBuilding(u,dt){
@@ -4193,7 +4334,7 @@ function updatePrompt(){
     else if(dtk) msg='Press E to crew the '+dtk.name;
     else if(alongside) msg='Press G to go ashore'+(alongside.name?' on '+alongside.name:'');
     else if(tu) msg='Press E to man '+tu.def.name+'   ·   X to scrap it';
-    else if(pa) msg='Press E to fly the '+pa.def.name+'   ·   A to send it up under AI';
+    else if(pa) msg='Press E to fly the '+pa.def.name+'   ·   Y to send it up under AI';
     else if(placed.length>=player.def.mounts) msg='Gun limit reached ('+placed.length+'/'+player.def.mounts+') — a bigger ship mounts more';
     else msg= selectedWeapon? 'Press F to install '+WEAPONS[selectedWeapon].name+' ($'+priceOf(WEAPONS[selectedWeapon].cost)+')  ['+placed.length+'/'+player.def.mounts+' guns]   ·   H: harbor upgrades' : 'Pick a weapon in the Armory (Tab) · H for harbor upgrades';
   } else if(manning){ msg='Fire: Left Click   ·   T view   ·   E to leave turret'; }
