@@ -543,8 +543,8 @@ function updateWeather(dt){
   scene.fog.far = W.far*(0.45+0.55*day); scene.fog.near = Math.min(800, scene.fog.far*0.25);
   // lights
   const bright=day*W.dark;
-  if(sun){ sun.intensity=0.36+1.2*bright; sun.color.setRGB(1, 0.92-dusk*0.25, 0.85-dusk*0.45); }   // boosted ~25% for ACES tone mapping
-  if(hemi) hemi.intensity=0.42+0.76*Math.max(bright,day*0.4);   // keep night moody but still playable
+  if(sun){ sun.intensity=0.28+0.95*bright; sun.color.setRGB(1, 0.92-dusk*0.25, 0.85-dusk*0.45); }   // original levels — ACES alone needs no boost
+  if(hemi) hemi.intensity=0.32+0.6*Math.max(bright,day*0.4);   // keep night moody but still playable
 }
 
 // =====================================================================
@@ -747,6 +747,16 @@ function addNavalHardware(g,def,L,B,deckY,enemy){
       color:0xd9e1d7,emissive:0xffe8a8,emissiveIntensity:.22,roughness:.25}));
     search.position.set(sx*Math.min(B*.42,3),deckY+2.5,L*.03);g.add(search);
     const vent=mkCyl(.2,.28,.85,steel,10);vent.position.set(sx*Math.min(B*.58,3.8),deckY+.65,-L*.28);g.add(vent);}
+  if(def.kind==='carrier'){
+    for(let i=0;i<4;i++){const wire=mkBox(B*1.65,.045,.055,dark);wire.position.set(0,deckY+.57,-L*(.18+i*.07));wire.rotation.y=.08;g.add(wire);}
+    const cranePost=mkCyl(.12,.16,3.3,steel,9);cranePost.position.set(B*.7,deckY+1.7,-L*.58);g.add(cranePost);
+    const boom=mkBox(4,.12,.14,steel);boom.position.set(B*.54,deckY+3.25,-L*.58);boom.rotation.z=-.15;g.add(boom);
+  }else{
+    const breakwater=navalBlock(B*1.3,.65,.25,steel,.72);breakwater.position.set(0,deckY+.48,L*.5);g.add(breakwater);
+    if(def.len<62)for(const sx of[-1,1]){const rack=mkBox(.55,.42,L*.18,dark);rack.position.set(sx*B*.67,deckY+.38,-L*.69);g.add(rack);}
+    if(def.len>68){const reel=mkCyl(.48,.48,1.5,steel,12);reel.rotation.z=Math.PI/2;reel.position.set(0,deckY+.65,-L*.4);g.add(reel);}
+    if(def.support){const crane=mkBox(5,.16,.18,steel);crane.position.set(B*.25,deckY+3,-L*.32);crane.rotation.z=-.28;g.add(crane);}
+  }
   // A stern ensign identifies the ship even when markers are hidden by fog.
   const pole=mkCyl(.035,.045,2.2,dark,7);pole.position.set(0,deckY+1.1,-L*.82);g.add(pole);
   const flag=mkBox(1.15,.62,.035,new THREE.MeshStandardMaterial({color:enemy?0xa62e31:0x2f75a8,roughness:.8}));
@@ -822,6 +832,7 @@ function buildShip(def, enemy){
     mounts.push(new THREE.Vector3(0,deckY,L*0.55), new THREE.Vector3(0,deckY+2.6,-2), new THREE.Vector3(0,deckY,-L*0.55));
   } else if(def.kind==='carrier'){
     const hull=hullMesh(L,B,def.depth,col); hull.position.y=deckY-def.depth; g.add(hull);
+    const lowerHull=hullMesh(L*.985,B*.965,def.depth*.44,0x633633);lowerHull.position.y=deckY-def.depth-.03;g.add(lowerHull);
     // Chamfered flight deck follows the hull rather than floating as a rectangular slab.
     const fd=deckPlanform(L*.98,B*.94,.5,SILVER(0x686f76),true);fd.position.y=deckY;g.add(fd);
     // deck centerline stripe
@@ -839,16 +850,17 @@ function buildShip(def, enemy){
                 new THREE.Vector3(-B*0.4,deckY+0.5,-L*0.4), new THREE.Vector3(B*0.3,deckY+0.5,-L*0.2));
   } else { // surface ship
     const hull=hullMesh(L,B,def.depth,col); hull.position.y=deckY-def.depth; g.add(hull);
+    const lowerHull=hullMesh(L*.985,B*.965,def.depth*.44,0x633633);lowerHull.position.y=deckY-def.depth-.03;g.add(lowerHull);
     // belt waterline accent
     const belt=hullMesh(L*0.99,B*1.01,0.8, 0x5a6068); belt.position.y=-0.2; g.add(belt);
     // Deck and forecastle inherit the hull's narrowing bow.
     const deck=deckPlanform(L*.94,B*.86,.28,SILVER(0x858d94));deck.position.y=deckY;g.add(deck);
     const forecastle=deckPlanform(L*.34,B*.78,.3,SILVER(0x92999f));forecastle.position.set(0,deckY+.26,L*.58);g.add(forecastle);
     // Split lower deckhouse leaves a real central passage to the helm; upper bridge spans above it.
-    const houseW=def.beam*.54,gap=Math.min(2.2,houseW*.34),sideW=(houseW-gap)/2,houseD=def.len*.2,houseZ=-def.len*.045;
+    const houseW=def.beam*.54,gap=Math.min(2.8,Math.max(2.1,houseW*.36)),sideW=(houseW-gap)/2,houseD=def.len*.2,houseZ=-def.len*.045;
     for(const sx of[-1,1]){const s1=navalBlock(sideW,2.6,houseD,SILVER(col),.8);
       s1.position.set(sx*(gap*.5+sideW*.5),deckY+1.55,houseZ);g.add(s1);
-      g.userData.walkBlocks.push({x:s1.position.x,z:houseZ,hx:sideW*.55,hz:houseD*.53});}
+      g.userData.walkBlocks.push({x:s1.position.x,z:houseZ,hx:sideW*.5,hz:houseD*.5});}
     const bridge=navalBlock(def.beam*.4,2.1,def.len*.105,SILVER(col),.74);bridge.position.set(0,deckY+3.55,def.len*.02);g.add(bridge);
     const win=mkBox(def.beam*0.39,0.5,def.len*0.101, new THREE.MeshStandardMaterial({color:0x101820,metalness:0.3,roughness:0.2})); win.position.set(0,deckY+3.6,def.len*0.02); g.add(win);
     const mast=mkCyl(0.12,0.16,5,SILVER(0x555)); mast.position.set(0,deckY+6.1,def.len*0.0); g.add(mast);
@@ -3498,11 +3510,40 @@ function toggleFoot(){
     flashPrompt('Ashore'+(footLand.name?' on '+footLand.name:'')+'! WASD to walk · G to re-board near your ship.'); updateMode();
   } else flashPrompt('Sail right up alongside an island or harbor, then press G to go ashore.');
 }
+const WALKABLE_STRUCTURE_KINDS=new Set(['airstrip','helipad','dock']);
+function harborWalkBlocked(x,z,h){
+  if(!h)return false;const dx=x-h.pos.x,dz=z-h.pos.z,pad=.55;
+  const rects=[[-8,-4,5,4],[6,-5,4,3.5],[12,4,2.2,2.2],[-28,0,.7,13],[-18,0,.7,13],[0,8,.7,.7]];
+  if(rects.some(b=>Math.abs(dx-b[0])<b[2]+pad&&Math.abs(dz-b[1])<b[3]+pad))return true;
+  for(let i=0;i<3;i++)if(Math.hypot(dx-(-13+i*3),dz-8)<2.5+pad)return true;
+  const rr=Math.hypot(dx,dz),a=Math.atan2(dz,dx),gap=h.pos.z>0?-Math.PI/2:Math.PI/2,
+    da=Math.atan2(Math.sin(a-gap),Math.cos(a-gap));
+  return rr>28-pad&&rr<32+pad&&Math.abs(da)>=.62;
+}
+function footWalkBlocked(x,z){
+  const harbor=footLand===friendlyHarbor?friendlyHarbor:footLand===enemyHarbor?enemyHarbor:null;
+  if(harborWalkBlocked(x,z,harbor))return true;
+  return landUnits.some(u=>{
+    if(u.dead||!STRUCTS[u.kind]||WALKABLE_STRUCTURE_KINDS.has(u.kind))return false;
+    if(!harbor&&footLand&&u.island&&u.island!==footLand)return false;
+    const radius=Math.max(2.2,(u.footprint||8)*.46);
+    return Math.hypot(x-u.pos.x,z-u.pos.z)<radius;
+  });
+}
+function deckWalkBlocked(x,z){
+  const blocks=player&&player.build&&player.build.group.userData.walkBlocks||[];
+  return blocks.some(b=>b.r!=null?Math.hypot(x-b.x,z-b.z)<b.r+.48:
+    Math.abs(x-b.x)<b.hx+.48&&Math.abs(z-b.z)<b.hz+.48);
+}
 function updateFoot(dt){
   let mf=0,ms=0; if(keys['KeyW'])mf+=1; if(keys['KeyS'])mf-=1; if(keys['KeyA'])ms-=1; if(keys['KeyD'])ms+=1;
   const f=new THREE.Vector3(Math.sin(camYaw.v),0,Math.cos(camYaw.v)), r=new THREE.Vector3(-f.z,0,f.x);
   const mv=f.multiplyScalar(mf).add(r.multiplyScalar(ms));
-  if(mv.lengthSq()>0){ mv.normalize().multiplyScalar(WALK*dt); footPos.x+=mv.x; footPos.z+=mv.z; }
+  if(mv.lengthSq()>0){mv.normalize().multiplyScalar(WALK*dt);
+    const nx=footPos.x+mv.x,nz=footPos.z+mv.z;
+    if(!footWalkBlocked(nx,footPos.z))footPos.x=nx;
+    if(!footWalkBlocked(footPos.x,nz))footPos.z=nz;
+  }
   // stay on the island (don't walk into the sea)
   const o=footLand; clampToIsland(footPos,o,0.92);
   footPos.y=o.top+EYE;
@@ -3531,7 +3572,11 @@ function updateWalk(dt){
   const fx=fwx*ch - fwz*sh, fz=fwx*sh + fwz*ch; // rotateY(-heading)
   const rx=-fz, rz=fx;
   let mx=fx*mf+rx*ms, mz=fz*mf+rz*ms; const l=Math.hypot(mx,mz);
-  if(l>0){ walkPos.x+=mx/l*WALK*dt; walkPos.z+=mz/l*WALK*dt; }
+  if(l>0){mx=mx/l*WALK*dt;mz=mz/l*WALK*dt;
+    const nx=walkPos.x+mx,nz=walkPos.z+mz;
+    if(!deckWalkBlocked(nx,walkPos.z))walkPos.x=nx;
+    if(!deckWalkBlocked(walkPos.x,nz))walkPos.z=nz;
+  }
   const hL=player.build.halfLen*0.86, hB=player.build.halfBeam*0.82;
   walkPos.x=Math.max(-hB,Math.min(hB,walkPos.x));
   walkPos.z=Math.max(-hL,Math.min(hL,walkPos.z));
