@@ -1344,11 +1344,23 @@ function aircraftFuselage(length,radius,mat,slender=1){
   const geo=new THREE.LatheGeometry(pts,24);geo.rotateX(Math.PI/2);geo.computeVertexNormals();
   const mesh=new THREE.Mesh(geo,mat);mesh.castShadow=true;mesh.receiveShadow=true;return mesh;
 }
+function taperAircraftWing(geo,halfSpan){
+  // Real wings lose section depth toward the tip. Keep a hair of thickness at
+  // full span to prevent coincident faces from flickering in WebGL.
+  const pos=geo.attributes.position;
+  for(let i=0;i<pos.count;i++){
+    const u=Math.min(1,Math.abs(pos.getX(i))/Math.max(0.001,halfSpan));
+    const section=Math.max(0.025,Math.pow(Math.max(0,1-u*u),0.55));
+    pos.setY(i,pos.getY(i)*section);
+  }
+  pos.needsUpdate=true;geo.computeVertexNormals();geo.computeBoundingBox();geo.computeBoundingSphere();
+  return geo;
+}
 function aircraftHalfWing(side,halfSpan,root,tip,sweep,thick,mat){
   const s=new THREE.Shape(),x=side*halfSpan;
   s.moveTo(0,root*.5);s.lineTo(x,tip*.5-sweep);s.lineTo(x,-tip*.5-sweep);s.lineTo(0,-root*.5);s.closePath();
   const geo=new THREE.ExtrudeGeometry(s,{depth:thick,steps:1,bevelEnabled:true,bevelSegments:2,bevelSize:Math.min(.07,thick*.32),bevelThickness:Math.min(.05,thick*.25)});
-  geo.rotateX(Math.PI/2);geo.translate(0,thick*.5,0);geo.computeVertexNormals();
+  geo.rotateX(Math.PI/2);geo.translate(0,thick*.5,0);taperAircraftWing(geo,halfSpan);
   const mesh=new THREE.Mesh(geo,mat);mesh.castShadow=true;mesh.receiveShadow=true;return mesh;
 }
 function aircraftWingSet(g,span,root,tip,sweep,thick,mat,z=0,y=0){
@@ -1372,7 +1384,7 @@ function aircraftUnifiedAirframe(g,opt,mat){
   const sh=new THREE.Shape();sh.moveTo(right[0][0],right[0][1]);for(let i=1;i<right.length;i++)sh.lineTo(right[i][0],right[i][1]);
   for(let i=right.length-2;i>=1;i--)sh.lineTo(-right[i][0],right[i][1]);sh.closePath();
   const geo=new THREE.ExtrudeGeometry(sh,{depth:thick,steps:1,bevelEnabled:true,bevelSegments:3,bevelSize:Math.min(.1,thick*.38),bevelThickness:Math.min(.07,thick*.28)});
-  geo.rotateX(Math.PI/2);geo.translate(0,thick*.5,0);geo.computeVertexNormals();
+  geo.rotateX(Math.PI/2);geo.translate(0,thick*.5,0);taperAircraftWing(geo,span*.5);
   const body=new THREE.Mesh(geo,mat);body.castShadow=true;body.receiveShadow=true;g.add(body);
   g.userData.wingL=body;g.userData.wingR=body;g.userData.unifiedAirframe=body;return body;
 }
@@ -1462,7 +1474,7 @@ function buildPlane(def){
     const plan=new THREE.Shape();plan.moveTo(0,length*.52);plan.lineTo(span*.5,-length*.31);plan.lineTo(span*.31,-length*.5);
     plan.lineTo(0,-length*.31);plan.lineTo(-span*.31,-length*.5);plan.lineTo(-span*.5,-length*.31);plan.closePath();
     const geo=new THREE.ExtrudeGeometry(plan,{depth:.38,bevelEnabled:true,bevelSegments:3,bevelSize:.11,bevelThickness:.08});
-    geo.rotateX(Math.PI/2);geo.translate(0,.19,0);geo.computeVertexNormals();
+    geo.rotateX(Math.PI/2);geo.translate(0,.19,0);taperAircraftWing(geo,span*.5);
     const body=new THREE.Mesh(geo,m);body.castShadow=true;g.add(body);g.userData.wingL=body;g.userData.wingR=body;
     const center=aircraftFuselage(length*.72,.5,m,1.25);center.scale.y=.55;center.position.y=.18;g.add(center);
     aircraftCanopy(g,0,.42,length*.16,.65,.25,1.05,glass);
