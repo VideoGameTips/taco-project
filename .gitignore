@@ -9,6 +9,8 @@
 !/mech-battles.html
 !/ClaudeCrab/
 !/ClaudeCrab/**
+!/server/
+!/server/**
 !/README.md
 !/CLAUDE.md
 !/.gitignore
