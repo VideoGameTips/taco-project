@@ -57,6 +57,15 @@
   #chatbox.open #chatinput{display:block;}
   #minimap{position:absolute;top:64px;right:18px;width:172px;height:172px;border-radius:50%;
     border:1px solid #2a4660;background:rgba(8,16,24,.35);box-shadow:0 0 14px rgba(0,0,0,.4);pointer-events:auto;cursor:pointer;}
+  /* ---- Claude, the ship's AI helper ---- */
+  #claude{position:absolute;left:22px;bottom:66px;display:flex;align-items:flex-end;gap:8px;pointer-events:auto;}
+  #claudeIcon{width:44px;height:34px;image-rendering:pixelated;cursor:pointer;animation:claudeBob 2.6s ease-in-out infinite;}
+  @keyframes claudeBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  #claudeBubble{max-width:280px;background:rgba(10,20,32,.88);border:1px solid #2a4660;border-radius:10px;
+    padding:7px 10px;font-size:12px;line-height:1.45;color:#dce8f4;position:relative;}
+  #claudeBubble b{color:#f0a070;font-size:10px;letter-spacing:1.5px;display:block;margin-bottom:2px;}
+  #claudeBubble:after{content:'';position:absolute;left:-6px;bottom:10px;border:6px solid transparent;border-right-color:#2a4660;border-left:0;}
+  #claudeX{position:absolute;top:2px;right:6px;color:#5f7a90;cursor:pointer;font-size:11px;}
   #tactical{position:fixed;inset:0;z-index:18;display:none;align-items:center;justify-content:center;
     background:rgba(3,8,13,.86);pointer-events:auto;}
   #tactical .panel{width:min(92vw,900px);padding:14px 16px 16px;border:1px solid #42627c;border-radius:10px;background:#09131d;
@@ -2086,6 +2095,61 @@ function newSideObjective(){
   else            sideOb={kind:'capture',goal:1, t:240, pay:900, base:controlledIslandCount(0), label:'BONUS: capture an island'};
   flashPrompt('★ NEW OBJECTIVE — '+sideOb.label+' ($'+sideOb.pay+')'); sfxClick();
 }
+// ===== CLAUDE — the ship's AI helper: pixel-crab mascot with contextual tips =====
+let claudeT=6, claudeIdx=-1, claudeHidden=false, claudeLastMsg='';
+const CLAUDE_TIPS=[
+  'Take the helm with E — W/S throttle, A/D rudder.',
+  'Press Tab for the Armory, then F to mount a gun right where you stand.',
+  'Press H for harbor upgrades — the Repair Dock is a lifesaver.',
+  'Sail beside an island and press G to go ashore. B builds defenses there.',
+  'Capture islands by clearing their defenders and holding close — they extend your radar.',
+  'Buy planes in the Hangar: E to fly one yourself, Y to send up an AI pilot.',
+  'Tanks ride your deck — E to crew one, G to land it on an island.',
+  'Watch the weather: fog, storms and night shrink everyone’s sensors.',
+  'Press T for first-person view in tanks, planes, turrets and at the helm.',
+  'The enemy Leviathan is worth $30,000. Bring friends.',
+  'Submarines dive with C — invisible to guns, but torpedoes only.',
+  'Sinking the enemy harbor wins the war — but islands feed your economy first.',
+];
+function claudeSay(msg){ const b=document.getElementById('claudeTxt'); if(!b||msg===claudeLastMsg) return; claudeLastMsg=msg; b.textContent=msg; }
+function initClaude(){
+  if(document.getElementById('claude')) return;
+  const hud=document.getElementById('hud'); if(!hud) return;
+  const d=document.createElement('div'); d.id='claude';
+  d.innerHTML='<canvas id="claudeIcon" width="11" height="8"></canvas>'+
+    '<div id="claudeBubble"><span id="claudeX">✕</span><b>CLAUDE · SHIP’S AI</b><span id="claudeTxt">Welcome aboard, Captain! Click me anytime for advice.</span></div>';
+  hud.appendChild(d);
+  const px=['..ooooooo..','..ooooooo..','o.oeoooeo.o','ooooooooooo','..ooooooo..','..o.o.o.o..','..o.o.o.o..'];
+  const g=document.getElementById('claudeIcon').getContext('2d');
+  px.forEach((row,y)=>{ for(let x=0;x<row.length;x++){ if(row[x]==='.')continue;
+    g.fillStyle=row[x]==='e'?'#241c18':'#c46f56'; g.fillRect(x,y,1,1); } });
+  document.getElementById('claudeIcon').onclick=()=>{ const bb=document.getElementById('claudeBubble');
+    if(claudeHidden){ claudeHidden=false; bb.style.display='block'; }
+    claudeT=14; claudeLastMsg=''; claudeSay(nextClaudeTip()); };
+  document.getElementById('claudeX').onclick=()=>{ claudeHidden=true; document.getElementById('claudeBubble').style.display='none'; };
+}
+function nextClaudeTip(){
+  // urgent, situation-aware advice first
+  if(player&&player.hp>0){
+    if(player.hp<player.maxhp*0.3) return '⚠ Hull critical, Captain! Run for home — the Repair Dock patches you up.';
+    const c=player.crit;
+    if(c&&c.fire>0) return '🔥 We’re on fire! It burns down in time — faster near the Repair Dock.';
+    if(c&&c.flood>0) return '💧 Taking on water! Stop taking hits and the crew will plug the leak.';
+  }
+  if(piloting&&piloting.fuelMax&&piloting.fuel<piloting.fuelMax*0.25) return '⛽ Fuel’s low — fly home and press E over the deck to land.';
+  if(friendlyHarbor&&friendlyHarbor.hp>0&&friendlyHarbor.hp<friendlyHarbor.maxhp*0.5) return '🚨 Our harbor is being pounded — get back and defend it!';
+  if(placed.length===0&&money>=300&&!piloting&&!drivingTank&&!onFoot) return 'No guns mounted yet! Tab → pick a weapon → F on deck to install it.';
+  if(typeof sideOb!=='undefined'&&sideOb) return '★ Objective: '+sideOb.label.replace('BONUS: ','')+' — pays $'+sideOb.pay+'.';
+  if(money>2600&&Math.random()<0.5) return '$'+money+' in the bunkers — Tab for guns, H for harbor upgrades.';
+  claudeIdx=(claudeIdx+1)%CLAUDE_TIPS.length; return CLAUDE_TIPS[claudeIdx];
+}
+function updateClaude(dt){
+  if(phase!=='play') return;
+  initClaude();
+  if(claudeHidden) return;
+  claudeT-=dt; if(claudeT>0) return; claudeT=13;
+  claudeSay(nextClaudeTip());
+}
 // ===== SHIP COLLISIONS — hulls can't overlap; ramming detonates; AI steers clear =====
 function shipRadius(def){ return def.len*0.22 + def.beam*0.5; }
 function steerClearOfShips(me,myPos,myDef,desired){   // bend the desired heading away from nearby hulls
@@ -3917,6 +3981,7 @@ function update(dt,t){
     if(f.light) f.mesh.intensity=Math.max(0,f.life*(f.li||14));
     if(f.life<=0) removeFxAt(i); }
   updatePrompt();
+  updateClaude(dt);
   updateCamera();
   updateAircraftAimAssist(dt);
 }
