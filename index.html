@@ -4856,7 +4856,7 @@ function moveLandUnitToward(u,target,dt,stop){
   const to=target.clone().sub(u.pos);to.y=0;const d=to.length();if(d<stop||d<1)return;
   const sp=u.kind==='tank'?(u.tank&&u.tank.speed?u.tank.speed*.7:10):7.2;
   to.normalize();u.pos.addScaledVector(to,sp*dt);if(u.island)clampToIsland(u.pos,u.island,0.9);
-  u.pos.y=u.kind==='tank'?2:1.4;u.group.position.copy(u.pos);u.group.rotation.y=Math.atan2(to.x,to.z);
+  u.pos.y=u.kind==='tank'?2:1.4;u.group.position.copy(u.pos);u.group.rotation.y=Math.atan2(to.x,to.z)+(u.kind==='tank'?Math.PI:0);
 }
 function groundAdvanceTarget(u,foe){
   const command=landUnits.find(x=>!x.dead&&x.team===foe&&x.kind==='command')||landUnits.find(x=>!x.dead&&x.team===foe);
@@ -4952,7 +4952,7 @@ function updateLandUnit(u,dt){
   const to=target.clone().sub(u.pos); const dist=to.length();
   if(ground) moveLandUnitToward(u,target,dt,u.kind==='soldier'?38:55);
   else if((window._MAP&&window._MAP.ground)&&(u.kind==='soldier'||u.kind==='tank')){const adv=groundAdvanceTarget(u,foe);if(adv)moveLandUnitToward(u,adv,dt,90);}
-  if(u.turret){ const wantYaw=Math.atan2(to.x,to.z); u.turret.rotation.y += Math.max(-2*dt,Math.min(2*dt, ((wantYaw-u.turret.rotation.y+Math.PI*3)%(Math.PI*2))-Math.PI)); }
+  if(u.turret){ const wantYaw=Math.atan2(to.x,to.z)-(u.kind==='tank'?u.group.rotation.y:0); u.turret.rotation.y += Math.max(-2*dt,Math.min(2*dt, ((wantYaw-u.turret.rotation.y+Math.PI*3)%(Math.PI*2))-Math.PI)); }
   u.fireT-=dt;
   if(u.fireT<=0 && dist<u.range){ u.fireT=u.fireRate*reloadFactor(u)*(0.8+Math.random()*0.5);
     const from=u.pos.clone().add(new THREE.Vector3(0,u.kind==='coastal'?3:1.7,0));
