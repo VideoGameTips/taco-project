@@ -1933,6 +1933,27 @@ function unlockNextMap(idx){ const want=Math.min(CAMPAIGN.length, idx+2);
 function applyMap(){ const M=CAMPAIGN[currentMapIdx]||CAMPAIGN[0];
   if(typeof weather==='object'){ weather.type=M.weather; weather.tod=M.tod; weather.day=null; }
   window._MAP=M; return M; }
+function mapArmyProfile(team=1,map=null){
+  const M=map||window._MAP||CAMPAIGN[currentMapIdx]||CAMPAIGN[0]||{}, N=Math.max(1,CAMPAIGN.length-1);
+  const idx=Math.max(0,CAMPAIGN.indexOf(M)>=0?CAMPAIGN.indexOf(M):currentMapIdx), progress=N?idx/N:0;
+  // Ground forces start at about 25% in Training Bay and climb toward 300% by the finale.
+  let base=0.25 + progress*2.75;
+  if(M.ground)base*=1.25;        // land-assault theaters should feel like proper invasions
+  if(M.boss)base*=1.08;          // flagship theaters also have tougher shore defenses
+  if(M.isles>=8)base*=1.10;      // wide island chains need more troops ashore
+  const named={
+    'Training Bay':{soldiers:.25,tanks:.25,prod:.35},
+    'The Landing':{soldiers:2.35,tanks:2.20,prod:1.75},
+    'Island Hopping':{soldiers:2.45,tanks:2.10,prod:1.85},
+    'Last Bastion':{soldiers:2.75,tanks:2.55,prod:2.10},
+    'The Last Tide':{soldiers:3.00,tanks:3.00,prod:2.60},
+  }[M.name];
+  const soldiers=Math.min(3,Math.max(.2,named?named.soldiers:base));
+  const tanks=Math.min(3,Math.max(.2,named?named.tanks:base*(M.ground?1.08:.92)));
+  const prod=Math.min(2.8,Math.max(.25,named?named.prod:base*.85));
+  const friendly=team===0?.82:1; // captured friendly islands grow, but do not snowball quite as hard
+  return {soldiers:soldiers*friendly,tanks:tanks*friendly,prod:prod*friendly,label:Math.round(base*100)+'%'};
+}
 // ===== FLEET COMMS & ORDERS — allies get callsigns, announce intent, coordinate, and take your orders =====
 const CALLSIGNS=['Alpha','Bravo','Charlie','Delta','Echo','Foxtrot','Golf','Hotel','India','Juliet','Kilo','Lima'];
 let _callsignN=0, fleetOrder=-1, _distressT=3;
@@ -2385,27 +2406,68 @@ addEventListener('keyup',e=>{ keys[e.code]=0; });
 // =====================================================================
 //  MENU
 // =====================================================================
+// Serpentine "voyage map" of the whole campaign — shows the route, what's secured, and where the fleet is now.
+function campaignMapHTML(){
+  const N=CAMPAIGN.length, per=8, sp=111, px=54, py=50, rh=92, R=15, W=880;
+  const rows=Math.ceil(N/per), H=py*2+(rows-1)*rh;
+  const unlocked=mapsUnlocked(), beaten=career.completed?N:Math.max(0,unlocked-1);
+  const pos=i=>{ const row=Math.floor(i/per); let col=i%per; if(row%2) col=per-1-col; return {x:px+col*sp,y:py+row*rh}; };
+  const pt=i=>{ const p=pos(i); return p.x.toFixed(1)+','+p.y.toFixed(1); };
+  const full='M'+Array.from({length:N},(_,i)=>pt(i)).join(' L');
+  const travN=Math.min(N-1,currentMapIdx);
+  const trav=travN>0 ? 'M'+Array.from({length:travN+1},(_,i)=>pt(i)).join(' L') : '';
+  let s='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;max-width:900px;display:block;margin:0 auto">';
+  s+='<path d="'+full+'" fill="none" stroke="#22394d" stroke-width="4" stroke-dasharray="2 9" stroke-linecap="round"/>';
+  if(trav) s+='<path d="'+trav+'" fill="none" stroke="#3f88c8" stroke-width="4" stroke-linecap="round" opacity="0.92"/>';
+  for(let i=0;i<N;i++){ const p=pos(i), M=CAMPAIGN[i];
+    const locked=i>=unlocked, done=i<beaten, cur=i===currentMapIdx;
+    let fill='#123048',stroke='#3579a8',txtc='#cfe6fb',label=String(i+1);
+    if(locked){ fill='#16222e';stroke='#2a3d4e';txtc='#51697d';label='🔒'; }
+    else if(done){ fill='#123726';stroke='#3fae78';txtc='#8ff0b4';label='✓'; }
+    if(cur){ stroke='#ffd060';txtc='#ffe9a8';label=String(i+1); }
+    s+='<g>';
+    if(cur) s+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+(R+5)+'" fill="none" stroke="#ffd060" stroke-width="2"><animate attributeName="r" values="'+(R+4)+';'+(R+10)+';'+(R+4)+'" dur="1.6s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.9;0.15;0.9" dur="1.6s" repeatCount="indefinite"/></circle>';
+    s+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+R+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+(cur?3:2)+'"/>';
+    s+='<text x="'+p.x+'" y="'+p.y+'" text-anchor="middle" dominant-baseline="central" font-size="'+(label.length>1?12:14)+'" font-weight="700" fill="'+txtc+'" style="font-family:inherit">'+label+'</text>';
+    if(cur) s+='<text x="'+p.x+'" y="'+(p.y-R-7)+'" text-anchor="middle" font-size="15">⚓</text>';
+    s+='<circle class="cmnode" data-idx="'+i+'" data-locked="'+(locked?1:0)+'" cx="'+p.x+'" cy="'+p.y+'" r="'+(R+7)+'" fill="transparent"><title>'+(i+1)+'. '+M.name+(locked?' — locked':' — '+M.theme)+'</title></circle>';
+    s+='</g>';
+  }
+  s+='</svg>';
+  const cur=CAMPAIGN[currentMapIdx]||CAMPAIGN[0];
+  const cap='<div style="text-align:center;margin:8px 0 2px;font-size:12px;color:#9fc6e8;letter-spacing:1px">'+
+    '<span style="color:#ffd060">⚓ THEATER '+(currentMapIdx+1)+' / '+N+'</span> — '+cur.name+
+    ' &nbsp;·&nbsp; <span style="color:#8ff0b4">✓ '+beaten+' secured</span> &nbsp;·&nbsp; '+
+    (unlocked<N?'<span style="color:#7e93a8">'+(N-unlocked)+' locked</span>':'<span style="color:#7e93a8">all theaters unlocked</span>')+'</div>';
+  return s+cap;
+}
 function buildCampaignPicker(){
   const ships=document.getElementById('ships'); if(!ships) return;
   if(currentMapIdx>=mapsUnlocked()) currentMapIdx=mapsUnlocked()-1; if(currentMapIdx<0) currentMapIdx=0;
   let box=document.getElementById('maps');
   if(!box){ box=document.createElement('div'); box.id='maps';
     box.style.cssText='display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:0 24px 4px;';
-    const h=document.createElement('div'); h.textContent='SELECT THEATER';
+    const h=document.createElement('div'); h.textContent='CAMPAIGN VOYAGE';
     h.style.cssText='width:100%;text-align:center;color:#6fa0c8;font-size:12px;letter-spacing:3px;margin:2px 0 10px;';
     box.appendChild(h); ships.parentNode.insertBefore(box, ships);
     const sh=document.createElement('div'); sh.textContent='— CHOOSE YOUR COMMAND —';
     sh.style.cssText='width:100%;text-align:center;color:#6fa0c8;font-size:12px;letter-spacing:3px;margin:12px 0 6px;';
     ships.parentNode.insertBefore(sh, ships);
   }
+  // (re)draw the voyage map at the top of the box, then the theater detail cards below it
+  let cm=document.getElementById('campmap');
+  if(!cm){ cm=document.createElement('div'); cm.id='campmap'; cm.style.cssText='width:100%;margin:0 0 14px;'; box.insertBefore(cm, box.children[1]||null); }
+  cm.innerHTML=campaignMapHTML();
+  cm.querySelectorAll('.cmnode').forEach(el=>{ if(el.getAttribute('data-locked')==='0'){ el.style.cursor='pointer'; el.onclick=()=>{ currentMapIdx=+el.getAttribute('data-idx'); buildCampaignPicker(); }; } });
   [...box.querySelectorAll('.mapcard')].forEach(e=>e.remove());
-  CAMPAIGN.forEach((M,i)=>{ const locked=i>=mapsUnlocked(), sel=i===currentMapIdx;
+  CAMPAIGN.forEach((M,i)=>{ const locked=i>=mapsUnlocked(), sel=i===currentMapIdx, army=mapArmyProfile(1,M);
     const c=document.createElement('div'); c.className='mapcard';
     c.style.cssText='width:152px;padding:9px;border-radius:9px;font-size:11px;transition:.15s;cursor:'+(locked?'default':'pointer')+
       ';border:1px solid '+(sel?'#5fd0ff':locked?'#22303c':'#21384e')+';background:'+(sel?'#13283a':'#101a24')+';opacity:'+(locked?0.45:1)+';';
     c.innerHTML='<div style="color:'+(locked?'#5f7a90':'#cfe6fb')+';font-weight:600;font-size:13px">'+(locked?'🔒 ':'')+(i+1)+'. '+M.name+'</div>'+
       '<div style="color:#7e93a8;margin-top:4px;line-height:1.4">'+(locked?'Win the previous theater to unlock.':M.theme)+'</div>'+
-      (locked?'':'<div style="color:#5f7a90;margin-top:5px">'+M.enemies+' enemy · '+M.isles+' isles · '+M.weather+(M.boss?' · ⚓ boss':'')+'</div>');
+      (locked?'':'<div style="color:#5f7a90;margin-top:5px">'+M.enemies+' enemy · '+M.isles+' isles · '+M.weather+(M.boss?' · ⚓ boss':'')+
+        '<br>Ground army '+Math.round(army.soldiers*100)+'% infantry · '+Math.round(army.tanks*100)+'% tanks</div>');
     if(!locked) c.onclick=()=>{ currentMapIdx=i; buildCampaignPicker(); };
     box.appendChild(c);
   });
@@ -2646,25 +2708,29 @@ function updateIslandAirService(dt){
 }
 function garrisonIsland(isl, team){
   const r=isl.r;
+  const army=mapArmyProfile(team);
   if(r>=90){
     if(!islandStructures(isl,team,'command').length)buildAndPushLand('command',team,islandPoint(isl,0.4,0.16,2),2,isl);
     buildAndPushLand('power',team,islandPoint(isl,2.7,0.22,2),2,isl);
     buildAndPushLand('barracks',team,islandPoint(isl,4.6,0.26,2),2,isl);
+    if(army.tanks>=1.2)buildAndPushLand('tankdepot',team,islandPoint(isl,5.55,0.30,2),2,isl);
   }
   const nC=Math.min(8,Math.max(4,Math.floor(r/45)));
   for(let i=0;i<nC;i++){ const a=i/nC*6.28+Math.random()*0.3; buildAndPushLand('coastal',team,islandPoint(isl,a,0.82,0)); }
   const nAA=Math.min(7,Math.max(3,Math.floor(r/55)));
   for(let i=0;i<nAA;i++){ const a=i/nAA*6.28+1.1,rr=0.42+Math.random()*0.32; buildAndPushLand('aa',team,islandPoint(isl,a,rr,1.4)); }
-  const nT=r>=150?4:r>=90?2:1;
+  const baseT=r>=150?4:r>=90?2:1, nT=Math.max(0,Math.round(baseT*army.tanks));
   for(let i=0;i<nT;i++) buildAndPushLand('tank',team,islandPoint(isl,Math.random()*6.28,0.28+Math.random()*0.22,1.4));
-  const nS=Math.min(10,Math.max(4,Math.floor(r/45)));
+  const baseS=Math.min(10,Math.max(4,Math.floor(r/45))), nS=Math.max(1,Math.round(baseS*army.soldiers));
   for(let i=0;i<nS;i++) buildAndPushLand('soldier',team,islandPoint(isl,Math.random()*6.28,0.35+Math.random()*0.48,1.4));
 }
 function garrisonHarbor(c, team){
+  const army=mapArmyProfile(team);
   for(let i=0;i<9;i++){ const a=i/9*6.28; buildAndPushLand('coastal',team, c.clone().add(new THREE.Vector3(Math.cos(a)*44,0,Math.sin(a)*44))); }
   for(let i=0;i<7;i++){ const a=i/7*6.28+0.3; buildAndPushLand('aa',team, c.clone().add(new THREE.Vector3(Math.cos(a)*30,1.4,Math.sin(a)*30))); }   // ring of flak
-  for(let i=0;i<3;i++){ const a=i*2.09+0.4; buildAndPushLand('tank',team, c.clone().add(new THREE.Vector3(Math.cos(a)*60,1.4,Math.sin(a)*60))); }
-  for(let i=0;i<6;i++){ const a=i/6*6.28; buildAndPushLand('soldier',team, c.clone().add(new THREE.Vector3(Math.cos(a)*72,1.4,Math.sin(a)*72))); }
+  const nT=Math.max(1,Math.round(3*army.tanks)), nS=Math.max(2,Math.round(6*army.soldiers));
+  for(let i=0;i<nT;i++){ const a=i/nT*6.28+0.4; buildAndPushLand('tank',team, c.clone().add(new THREE.Vector3(Math.cos(a)*60,1.4,Math.sin(a)*60))); }
+  for(let i=0;i<nS;i++){ const a=i/nS*6.28; buildAndPushLand('soldier',team, c.clone().add(new THREE.Vector3(Math.cos(a)*72,1.4,Math.sin(a)*72))); }
 }
 const STRUCT_KINDS=Object.keys(STRUCTS);
 function buildAndPushLand(kind,team,pos,yOverride,islOverride){
@@ -4484,8 +4550,9 @@ function updateSupportBuilding(u,dt){
   if(u.power){u.group.rotation.y+=Math.sin(t2*.5+u.pos.x)*dt*.002;return true;}
   if(u.command||u.bridge||u.sonar||u.airstrip||u.helipad||u.fuel)return true;
   if(u.barracks){
-    u.prodT=(u.prodT||8)-dt;if(u.prodT<=0&&isl){u.prodT=24;
-      const squads=islandStructures(isl,u.team,'soldier');if(squads.length<3){
+    const army=mapArmyProfile(u.team), cap=Math.max(1,Math.round(3*army.soldiers)), interval=Math.max(7,24/Math.sqrt(army.prod));
+    u.prodT=(u.prodT||Math.min(8,interval*.45))-dt;if(u.prodT<=0&&isl){u.prodT=interval;
+      const squads=islandStructures(isl,u.team,'soldier');if(squads.length<cap){
         const p=u.pos.clone().add(new THREE.Vector3((Math.random()-.5)*18,0,(Math.random()-.5)*18));p.y=2;
         buildAndPushLand('soldier',u.team,p,2,isl);}}
     return true;
@@ -4497,8 +4564,9 @@ function updateSupportBuilding(u,dt){
     if(drivingTank&&!drivingTank.onDeck&&drivingTank.island===isl&&drivingTank.pos.distanceTo(u.pos)<130){
       drivingTank.hp=Math.min(drivingTank.maxhp,drivingTank.hp+13*boost*dt);
       u.repairT=(u.repairT||0)+dt;if(u.workshop&&u.repairT>5){u.repairT=0;const damaged=Object.keys(drivingTank.parts||{}).filter(k=>drivingTank.parts[k]>0);if(damaged.length)drivingTank.parts[damaged[0]]--;}}
-    if(u.tankdepot&&isl){u.prodT=(u.prodT||20)-dt;if(u.prodT<=0){u.prodT=42;
-      if(islandStructures(isl,u.team,'tank').length<2){const p=u.pos.clone().add(new THREE.Vector3(18,0,0));p.y=2;buildAndPushLand('tank',u.team,p,2,isl);}}}
+    if(u.tankdepot&&isl){const army=mapArmyProfile(u.team), cap=Math.max(1,Math.round(2*army.tanks)), interval=Math.max(12,42/Math.sqrt(army.prod));
+      u.prodT=(u.prodT||Math.min(20,interval*.5))-dt;if(u.prodT<=0){u.prodT=interval;
+      if(islandStructures(isl,u.team,'tank').length<cap){const p=u.pos.clone().add(new THREE.Vector3(18,0,0));p.y=2;buildAndPushLand('tank',u.team,p,2,isl);}}}
     return true;
   }
   if(u.dock){shipsOf(u.team).forEach(s=>{if(s.pos.distanceTo(u.pos)<240){s.hp=Math.min(s.maxhp,s.hp+7*dt);if(s.compartments)repairCompartments(s,dt*2);}});return true;}
@@ -4982,7 +5050,7 @@ function endGame(win,msg){
   let unlockMsg='';
   if(win){ if(unlockNextMap(currentMapIdx)){ const nm=CAMPAIGN[currentMapIdx+1];
       unlockMsg=`<br><br><span style="color:#7ff0a8">🗺 NEW THEATER UNLOCKED — ${nm.name}!</span>`; }
-    else if(currentMapIdx>=CAMPAIGN.length-1) unlockMsg='<br><br><span style="color:#ffd060">🏆 CAMPAIGN COMPLETE — every theater is yours, Fleet Admiral.</span>'; }
+    else if(currentMapIdx>=CAMPAIGN.length-1){ if(!career.completed){ career.completed=true; saveCareer(); } unlockMsg='<br><br><span style="color:#ffd060">🏆 CAMPAIGN COMPLETE — every theater is yours, Fleet Admiral.</span>'; } }
   if(document.pointerLockElement)document.exitPointerLock();
   document.getElementById('over').style.display='flex';
   const t=document.getElementById('overTitle');
