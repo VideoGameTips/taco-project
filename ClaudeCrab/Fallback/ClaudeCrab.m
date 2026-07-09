@@ -765,12 +765,338 @@
 }
 @end
 
+@interface CursorWeaponOverlay : NSObject
+- (void)cycleAt:(NSPoint)point;
+- (void)attackAt:(NSPoint)point;
+- (void)updatePositionTo:(NSPoint)point;
+- (void)dismiss;
+@end
+
+@interface CursorWeaponView : NSView
+@property(nonatomic, copy) NSDictionary<NSString *, NSString *> *weapon;
+@property(nonatomic) CGFloat attackPulse;
+@end
+
+@implementation CursorWeaponView
+- (BOOL)isOpaque { return NO; }
+
+- (void)drawRect:(NSRect)dirtyRect {
+    [super drawRect:dirtyRect];
+    if (!self.weapon) return;
+
+    [[NSColor colorWithCalibratedWhite:0 alpha:0.45] setFill];
+    [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(10, 4, 34, 10)] fill];
+
+    if (self.attackPulse > 0) {
+        [[NSColor.systemYellowColor colorWithAlphaComponent:0.65 * self.attackPulse] setFill];
+        [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(34, 28, 18 + self.attackPulse * 16, 12)] fill];
+    }
+
+    [self drawWeaponNamed:self.weapon[@"name"] inRect:NSInsetRect(self.bounds, 4, 8)];
+}
+
+- (void)strokePoints:(NSArray<NSValue *> *)values color:(NSColor *)color width:(CGFloat)width {
+    if (values.count == 0) return;
+    NSBezierPath *path = [NSBezierPath bezierPath];
+    [path moveToPoint:values.firstObject.pointValue];
+    for (NSUInteger index = 1; index < values.count; index++) {
+        [path lineToPoint:values[index].pointValue];
+    }
+    path.lineWidth = width;
+    path.lineCapStyle = NSLineCapStyleRound;
+    path.lineJoinStyle = NSLineJoinStyleRound;
+    [color setStroke];
+    [path stroke];
+}
+
+- (BOOL)name:(NSString *)name isOneOf:(NSArray<NSString *> *)names {
+    return [names containsObject:name];
+}
+
+- (void)drawWeaponNamed:(NSString *)name inRect:(NSRect)r {
+    if ([self name:name isOneOf:@[@"sword", @"katana"]]) {
+        [self drawBlade:r curved:[name isEqualToString:@"katana"]];
+    } else if ([name isEqualToString:@"bow"]) {
+        [self drawBow:r cross:NO];
+    } else if ([name isEqualToString:@"crossbow"]) {
+        [self drawBow:r cross:YES];
+    } else if ([self name:name isOneOf:@[@"axe", @"tomahawk"]]) {
+        [self drawAxe:r];
+    } else if ([self name:name isOneOf:@[@"spear", @"halberd"]]) {
+        [self drawPolearm:r halberd:[name isEqualToString:@"halberd"]];
+    } else if ([name isEqualToString:@"dagger"]) {
+        [self drawBlade:NSInsetRect(r, 8, 8) curved:NO];
+    } else if ([self name:name isOneOf:@[@"mace", @"club"]]) {
+        [self drawBlunt:r spiked:[name isEqualToString:@"mace"]];
+    } else if ([name isEqualToString:@"staff"]) {
+        [self drawStaff:r];
+    } else if ([name isEqualToString:@"flail"]) {
+        [self drawChain:r];
+    } else if ([name isEqualToString:@"scythe"]) {
+        [self drawScythe:r];
+    } else if ([name isEqualToString:@"whip"]) {
+        [self drawWhip:r];
+    } else if ([name isEqualToString:@"grenade"]) {
+        [self drawGrenade:r];
+    } else if ([self name:name isOneOf:@[@"rocket launcher", @"bazooka"]]) {
+        [self drawRocket:r];
+    } else if ([self name:name isOneOf:@[@"laser gun", @"plasma rifle", @"railgun"]]) {
+        [self drawEnergy:r plasma:[name isEqualToString:@"plasma rifle"]];
+    } else if ([name isEqualToString:@"flamethrower"]) {
+        [self drawFlame:r];
+    } else if ([name isEqualToString:@"boomerang"]) {
+        [self drawBoomerang:r];
+    } else if ([self name:name isOneOf:@[@"cannon", @"minigun", @"machine gun"]]) {
+        [self drawHeavy:r cannon:[name isEqualToString:@"cannon"]];
+    } else if ([self name:name isOneOf:@[@"handgun", @"pistol", @"revolver", @"uzi", @"glock", @"desert eagle", @"colt 1911", @"sig sauer p226", @"beretta 92fs", @"hk usp"]]) {
+        [self drawGun:r long:NO heavy:[name isEqualToString:@"desert eagle"]];
+    } else {
+        [self drawGun:r long:YES heavy:[name isEqualToString:@"shotgun"] || [name isEqualToString:@"blunderbuss"]];
+    }
+}
+
+- (void)drawBlade:(NSRect)r curved:(BOOL)curved {
+    [self strokePoints:@[
+        [NSValue valueWithPoint:NSMakePoint(NSMinX(r) + 10, NSMinY(r) + 8)],
+        [NSValue valueWithPoint:NSMakePoint(NSMaxX(r) - 8 + self.attackPulse * 6, NSMaxY(r) - 8)]
+    ] color:NSColor.systemGrayColor width:curved ? 7 : 5];
+    [self strokePoints:@[
+        [NSValue valueWithPoint:NSMakePoint(NSMinX(r) + 12, NSMinY(r) + 9)],
+        [NSValue valueWithPoint:NSMakePoint(NSMinX(r) + 5, NSMinY(r) + 2)]
+    ] color:NSColor.brownColor width:5];
+    [self strokePoints:@[
+        [NSValue valueWithPoint:NSMakePoint(NSMinX(r) + 5, NSMinY(r) + 15)],
+        [NSValue valueWithPoint:NSMakePoint(NSMinX(r) + 18, NSMinY(r) + 3)]
+    ] color:NSColor.systemYellowColor width:4];
+}
+
+- (void)drawBow:(NSRect)r cross:(BOOL)cross {
+    [self strokePoints:@[[NSValue valueWithPoint:NSMakePoint(NSMinX(r)+12, NSMinY(r)+6)], [NSValue valueWithPoint:NSMakePoint(NSMinX(r)+5, NSMidY(r))], [NSValue valueWithPoint:NSMakePoint(NSMinX(r)+12, NSMaxY(r)-6)]] color:NSColor.brownColor width:5];
+    [self strokePoints:@[[NSValue valueWithPoint:NSMakePoint(NSMinX(r)+12, NSMinY(r)+6)], [NSValue valueWithPoint:NSMakePoint(NSMinX(r)+12, NSMaxY(r)-6)]] color:NSColor.whiteColor width:1.5];
+    [self strokePoints:@[[NSValue valueWithPoint:NSMakePoint(NSMinX(r)+13, NSMidY(r))], [NSValue valueWithPoint:NSMakePoint(NSMaxX(r)-5, NSMidY(r))]] color:NSColor.systemGrayColor width:2];
+    if (cross) [self strokePoints:@[[NSValue valueWithPoint:NSMakePoint(NSMidX(r), NSMinY(r)+9)], [NSValue valueWithPoint:NSMakePoint(NSMidX(r), NSMaxY(r)-9)]] color:NSColor.brownColor width:5];
+}
+
+- (void)drawAxe:(NSRect)r {
+    [self strokePoints:@[[NSValue valueWithPoint:NSMakePoint(NSMinX(r)+10, NSMinY(r)+4)], [NSValue valueWithPoint:NSMakePoint(NSMaxX(r)-8, NSMaxY(r)-7)]] color:NSColor.brownColor width:6];
+    [NSColor.systemGrayColor setFill];
+    [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(NSMaxX(r)-24, NSMaxY(r)-22, 22, 20)] fill];
+}
+
+- (void)drawPolearm:(NSRect)r halberd:(BOOL)halberd {
+    [self strokePoints:@[[NSValue valueWithPoint:NSMakePoint(NSMinX(r)+8, NSMinY(r)+6)], [NSValue valueWithPoint:NSMakePoint(NSMaxX(r)-8, NSMaxY(r)-6)]] color:NSColor.brownColor width:4];
+    [NSColor.systemGrayColor setFill];
+    [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(NSMaxX(r)-18, NSMaxY(r)-17, 15, 15)] fill];
+    if (halberd) [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(NSMaxX(r)-27, NSMaxY(r)-22, 17, 17)] fill];
+}
+
+- (void)drawBlunt:(NSRect)r spiked:(BOOL)spiked {
+    [self strokePoints:@[[NSValue valueWithPoint:NSMakePoint(NSMinX(r)+9, NSMinY(r)+7)], [NSValue valueWithPoint:NSMakePoint(NSMaxX(r)-11, NSMaxY(r)-10)]] color:NSColor.brownColor width:7];
+    [(spiked ? NSColor.darkGrayColor : NSColor.brownColor) setFill];
+    [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(NSMaxX(r)-21, NSMaxY(r)-21, 18, 18)] fill];
+}
+
+- (void)drawStaff:(NSRect)r {
+    [self strokePoints:@[[NSValue valueWithPoint:NSMakePoint(NSMinX(r)+8, NSMinY(r)+6)], [NSValue valueWithPoint:NSMakePoint(NSMaxX(r)-8, NSMaxY(r)-6)]] color:NSColor.brownColor width:5];
+    [NSColor.systemPurpleColor setFill];
+    [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(NSMaxX(r)-16, NSMaxY(r)-16, 12, 12)] fill];
+}
+
+- (void)drawChain:(NSRect)r {
+    [self strokePoints:@[[NSValue valueWithPoint:NSMakePoint(NSMinX(r)+10, NSMaxY(r)-10)], [NSValue valueWithPoint:NSMakePoint(NSMidX(r), NSMidY(r))], [NSValue valueWithPoint:NSMakePoint(NSMaxX(r)-15, NSMaxY(r)-15)]] color:NSColor.systemGrayColor width:4];
+    [NSColor.darkGrayColor setFill];
+    [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(NSMaxX(r)-20, NSMaxY(r)-22, 18, 18)] fill];
+}
+
+- (void)drawScythe:(NSRect)r {
+    [self strokePoints:@[[NSValue valueWithPoint:NSMakePoint(NSMinX(r)+10, NSMinY(r)+5)], [NSValue valueWithPoint:NSMakePoint(NSMaxX(r)-12, NSMaxY(r)-7)]] color:NSColor.brownColor width:5];
+    [self strokePoints:@[[NSValue valueWithPoint:NSMakePoint(NSMaxX(r)-17, NSMaxY(r)-10)], [NSValue valueWithPoint:NSMakePoint(NSMaxX(r)-3, NSMaxY(r)-27)]] color:NSColor.systemGrayColor width:5];
+}
+
+- (void)drawWhip:(NSRect)r {
+    [self strokePoints:@[[NSValue valueWithPoint:NSMakePoint(NSMinX(r)+8, NSMinY(r)+10)], [NSValue valueWithPoint:NSMakePoint(NSMidX(r)-5, NSMidY(r)+8)], [NSValue valueWithPoint:NSMakePoint(NSMaxX(r)-8, NSMidY(r)-10)]] color:NSColor.brownColor width:4];
+}
+
+- (void)drawGun:(NSRect)r long:(BOOL)longGun heavy:(BOOL)heavy {
+    NSRect body = NSMakeRect(NSMinX(r)+8, NSMidY(r), longGun ? 35 : 24, heavy ? 10 : 8);
+    [NSColor.darkGrayColor setFill];
+    NSRectFill(body);
+    NSRectFill(NSMakeRect(NSMaxX(body)-2, NSMidY(body)-2, longGun ? 16 : 8, 4));
+    [NSColor.blackColor setFill];
+    NSRectFill(NSMakeRect(NSMinX(body)+5, NSMinY(body)-12, 7, 13));
+}
+
+- (void)drawHeavy:(NSRect)r cannon:(BOOL)cannon {
+    [self drawGun:r long:YES heavy:YES];
+    if (cannon) [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(NSMinX(r)+4, NSMinY(r)+8, 12, 12)] fill];
+}
+
+- (void)drawGrenade:(NSRect)r {
+    [NSColor.darkGrayColor setFill];
+    [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(NSMidX(r)-13, NSMidY(r)-12, 26, 26)] fill];
+    [NSColor.systemGrayColor setFill];
+    NSRectFill(NSMakeRect(NSMidX(r)-5, NSMidY(r)+12, 10, 6));
+}
+
+- (void)drawRocket:(NSRect)r {
+    [self strokePoints:@[[NSValue valueWithPoint:NSMakePoint(NSMinX(r)+8, NSMinY(r)+8)], [NSValue valueWithPoint:NSMakePoint(NSMaxX(r)-8, NSMaxY(r)-8)]] color:NSColor.systemRedColor width:9];
+    [NSColor.systemOrangeColor setFill];
+    [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(NSMinX(r)+4, NSMinY(r)+3, 15, 12)] fill];
+}
+
+- (void)drawEnergy:(NSRect)r plasma:(BOOL)plasma {
+    [self drawGun:r long:YES heavy:NO];
+    [(plasma ? NSColor.systemPurpleColor : NSColor.systemCyanColor) setFill];
+    [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(NSMaxX(r)-12, NSMidY(r)-7, 13, 13)] fill];
+}
+
+- (void)drawFlame:(NSRect)r {
+    [self drawGun:r long:YES heavy:YES];
+    [NSColor.systemOrangeColor setFill];
+    [[NSBezierPath bezierPathWithOvalInRect:NSMakeRect(NSMaxX(r)-13, NSMidY(r)-5, 20, 14)] fill];
+}
+
+- (void)drawBoomerang:(NSRect)r {
+    [self strokePoints:@[[NSValue valueWithPoint:NSMakePoint(NSMinX(r)+9, NSMinY(r)+12)], [NSValue valueWithPoint:NSMakePoint(NSMidX(r), NSMaxY(r)-8)], [NSValue valueWithPoint:NSMakePoint(NSMaxX(r)-8, NSMinY(r)+14)]] color:NSColor.systemTealColor width:8];
+}
+@end
+
+@implementation CursorWeaponOverlay {
+    NSWindow *_window;
+    CursorWeaponView *_weaponView;
+    NSArray<NSDictionary<NSString *, NSString *> *> *_weapons;
+    NSInteger _selectedIndex;
+    NSTimer *_followTimer;
+    NSTimer *_attackTimer;
+    BOOL _cursorHidden;
+}
+
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        _selectedIndex = -1;
+        _weapons = @[
+            @{@"name": @"sword", @"symbol": @"⚔️"}, @{@"name": @"bow", @"symbol": @"🏹"},
+            @{@"name": @"axe", @"symbol": @"🪓"}, @{@"name": @"spear", @"symbol": @"🔱"},
+            @{@"name": @"dagger", @"symbol": @"🗡️"}, @{@"name": @"mace", @"symbol": @"⚒️"},
+            @{@"name": @"staff", @"symbol": @"🪄"}, @{@"name": @"crossbow", @"symbol": @"🏹"},
+            @{@"name": @"flail", @"symbol": @"⛓️"}, @{@"name": @"halberd", @"symbol": @"🔱"},
+            @{@"name": @"scythe", @"symbol": @"☾"}, @{@"name": @"whip", @"symbol": @"〰️"},
+            @{@"name": @"club", @"symbol": @"♣️"}, @{@"name": @"katana", @"symbol": @"🗡️"},
+            @{@"name": @"handgun", @"symbol": @"🔫"}, @{@"name": @"musket", @"symbol": @"🔫"},
+            @{@"name": @"blunderbuss", @"symbol": @"🔫"}, @{@"name": @"pistol", @"symbol": @"🔫"},
+            @{@"name": @"revolver", @"symbol": @"🔫"}, @{@"name": @"rifle", @"symbol": @"🔫"},
+            @{@"name": @"shotgun", @"symbol": @"🔫"}, @{@"name": @"cannon", @"symbol": @"💣"},
+            @{@"name": @"grenade", @"symbol": @"💣"}, @{@"name": @"rocket launcher", @"symbol": @"🚀"},
+            @{@"name": @"laser gun", @"symbol": @"🔆"}, @{@"name": @"plasma rifle", @"symbol": @"🟣"},
+            @{@"name": @"railgun", @"symbol": @"⚡"}, @{@"name": @"flamethrower", @"symbol": @"🔥"},
+            @{@"name": @"minigun", @"symbol": @"🔫"}, @{@"name": @"sniper rifle", @"symbol": @"🎯"},
+            @{@"name": @"submachine gun", @"symbol": @"🔫"}, @{@"name": @"assault rifle", @"symbol": @"🔫"},
+            @{@"name": @"machine gun", @"symbol": @"🔫"}, @{@"name": @"bazooka", @"symbol": @"🚀"},
+            @{@"name": @"tomahawk", @"symbol": @"🪓"}, @{@"name": @"boomerang", @"symbol": @"🪃"},
+            @{@"name": @"ak-47", @"symbol": @"🔫"}, @{@"name": @"uzi", @"symbol": @"🔫"},
+            @{@"name": @"mp5", @"symbol": @"🔫"}, @{@"name": @"glock", @"symbol": @"🔫"},
+            @{@"name": @"desert eagle", @"symbol": @"🔫"}, @{@"name": @"colt 1911", @"symbol": @"🔫"},
+            @{@"name": @"m16", @"symbol": @"🔫"}, @{@"name": @"m4 carbine", @"symbol": @"🔫"},
+            @{@"name": @"scar-l", @"symbol": @"🔫"}, @{@"name": @"famas", @"symbol": @"🔫"},
+            @{@"name": @"galil", @"symbol": @"🔫"}, @{@"name": @"aug", @"symbol": @"🔫"},
+            @{@"name": @"sig sauer p226", @"symbol": @"🔫"}, @{@"name": @"beretta 92fs", @"symbol": @"🔫"},
+            @{@"name": @"hk usp", @"symbol": @"🔫"}, @{@"name": @"fn p90", @"symbol": @"🔫"},
+            @{@"name": @"steyr aug a3", @"symbol": @"🔫"},
+            @{@"name": @"heckler & koch g36c", @"symbol": @"🔫"},
+            @{@"name": @"fn fal", @"symbol": @"🔫"}, @{@"name": @"l85a2", @"symbol": @"🔫"},
+            @{@"name": @"ar-15", @"symbol": @"🔫"}, @{@"name": @"ar-10", @"symbol": @"🔫"},
+            @{@"name": @"ar-18", @"symbol": @"🔫"}, @{@"name": @"ar-70/90", @"symbol": @"🔫"}
+        ];
+
+        NSSize size = NSMakeSize(58, 58);
+        _window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, size.width, size.height)
+                                             styleMask:NSWindowStyleMaskBorderless
+                                               backing:NSBackingStoreBuffered
+                                                 defer:NO];
+        _weaponView = [[CursorWeaponView alloc] initWithFrame:NSMakeRect(0, 0, size.width, size.height)];
+        _window.contentView = _weaponView;
+        _window.opaque = NO;
+        _window.backgroundColor = NSColor.clearColor;
+        _window.hasShadow = NO;
+        _window.ignoresMouseEvents = YES;
+        _window.level = NSScreenSaverWindowLevel;
+        _window.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces |
+                                     NSWindowCollectionBehaviorFullScreenAuxiliary |
+                                     NSWindowCollectionBehaviorStationary;
+    }
+    return self;
+}
+
+- (void)cycleAt:(NSPoint)point {
+    if (_weapons.count == 0) return;
+    _selectedIndex = (_selectedIndex + 1) % _weapons.count;
+    _weaponView.weapon = _weapons[_selectedIndex];
+    _weaponView.needsDisplay = YES;
+    [self showAt:point];
+}
+
+- (void)attackAt:(NSPoint)point {
+    if (!_window.visible || !_weaponView.weapon) return;
+    [self updatePositionTo:point];
+    _weaponView.attackPulse = 1;
+    _weaponView.needsDisplay = YES;
+    [_attackTimer invalidate];
+    __weak CursorWeaponOverlay *weakSelf = self;
+    _attackTimer = [NSTimer timerWithTimeInterval:0.08 repeats:YES block:^(NSTimer *timer) {
+        CursorWeaponOverlay *strongSelf = weakSelf;
+        strongSelf->_weaponView.attackPulse -= 0.28;
+        if (strongSelf->_weaponView.attackPulse <= 0) {
+            strongSelf->_weaponView.attackPulse = 0;
+            [timer invalidate];
+            strongSelf->_attackTimer = nil;
+        }
+        strongSelf->_weaponView.needsDisplay = YES;
+    }];
+    [NSRunLoop.mainRunLoop addTimer:_attackTimer forMode:NSRunLoopCommonModes];
+}
+
+- (void)showAt:(NSPoint)point {
+    [self updatePositionTo:point];
+    [_window orderFrontRegardless];
+    if (!_cursorHidden) {
+        [NSCursor hide];
+        _cursorHidden = YES;
+    }
+    if (!_followTimer) {
+        __weak CursorWeaponOverlay *weakSelf = self;
+        _followTimer = [NSTimer timerWithTimeInterval:1.0 / 60.0 repeats:YES block:^(NSTimer *timer) {
+            [weakSelf updatePositionTo:NSEvent.mouseLocation];
+        }];
+        [NSRunLoop.mainRunLoop addTimer:_followTimer forMode:NSRunLoopCommonModes];
+    }
+}
+
+- (void)updatePositionTo:(NSPoint)point {
+    if (!_window.visible) return;
+    [_window setFrameOrigin:NSMakePoint(point.x - 8, point.y - 44)];
+}
+
+- (void)dismiss {
+    [_followTimer invalidate];
+    _followTimer = nil;
+    [_attackTimer invalidate];
+    _attackTimer = nil;
+    [_window orderOut:nil];
+    if (_cursorHidden) {
+        [NSCursor unhide];
+        _cursorHidden = NO;
+    }
+}
+@end
+
 @interface AppDelegate : NSObject <NSApplicationDelegate>
 @end
 
 @implementation AppDelegate {
     NSMutableArray<CrabPet *> *_crabs;
     NSMutableDictionary<NSUUID *, CursorProjectile *> *_projectiles;
+    CursorWeaponOverlay *_weaponOverlay;
     CrabPet *_draggedCrab;
     NSTimer *_behaviorTimer;
     NSStatusItem *_statusItem;
@@ -779,11 +1105,16 @@
     NSInteger _clickCount;
     NSTimeInterval _lastClickTime;
     NSPoint _lastClickPoint;
+    NSInteger _rightClickCount;
+    NSTimeInterval _lastRightClickTime;
+    NSPoint _lastRightClickPoint;
+    NSTimer *_pendingRightClickTimer;
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
     _crabs = [NSMutableArray array];
     _projectiles = [NSMutableDictionary dictionary];
+    _weaponOverlay = [[CursorWeaponOverlay alloc] init];
     [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
     [self installStatusItem];
 
@@ -799,7 +1130,9 @@
     NSEventMask interactionMask = NSEventMaskLeftMouseDown |
                                   NSEventMaskLeftMouseDragged |
                                   NSEventMaskLeftMouseUp |
-                                  NSEventMaskRightMouseDown;
+                                  NSEventMaskRightMouseDown |
+                                  NSEventMaskRightMouseDragged |
+                                  NSEventMaskMouseMoved;
     _globalMonitor = [NSEvent addGlobalMonitorForEventsMatchingMask:interactionMask
                                                             handler:^(NSEvent *event) {
         [weakSelf handlePointerEvent:event];
@@ -817,6 +1150,8 @@
 
 - (void)applicationWillTerminate:(NSNotification *)notification {
     [_behaviorTimer invalidate];
+    [_pendingRightClickTimer invalidate];
+    [_weaponOverlay dismiss];
     if (_globalMonitor) [NSEvent removeMonitor:_globalMonitor];
     if (_localMonitor) [NSEvent removeMonitor:_localMonitor];
 }
@@ -824,7 +1159,11 @@
 - (void)handlePointerEvent:(NSEvent *)event {
     NSPoint point = NSEvent.mouseLocation;
     if (event.type == NSEventTypeRightMouseDown) {
-        [self deleteCrabAt:point];
+        [self handleRightClickAt:point timestamp:event.timestamp];
+        return;
+    }
+    if (event.type == NSEventTypeRightMouseDragged || event.type == NSEventTypeMouseMoved) {
+        [_weaponOverlay updatePositionTo:point];
         return;
     }
     if (event.type == NSEventTypeLeftMouseDragged) {
@@ -849,6 +1188,8 @@
     }
     if (event.type != NSEventTypeLeftMouseDown) return;
 
+    [_weaponOverlay attackAt:point];
+
     for (CrabPet *crab in _crabs.reverseObjectEnumerator) {
         if ([crab containsPoint:point]) {
             _draggedCrab = crab;
@@ -870,6 +1211,35 @@
         _clickCount = 0;
         [self summonAt:point];
     }
+}
+
+- (void)handleRightClickAt:(NSPoint)point timestamp:(NSTimeInterval)timestamp {
+    CGFloat distance = hypot(point.x - _lastRightClickPoint.x, point.y - _lastRightClickPoint.y);
+    if (_rightClickCount > 0 && timestamp - _lastRightClickTime <= 0.48 && distance <= 28) {
+        _rightClickCount++;
+    } else {
+        _rightClickCount = 1;
+    }
+    _lastRightClickTime = timestamp;
+    _lastRightClickPoint = point;
+
+    if (_rightClickCount == 2) {
+        _rightClickCount = 0;
+        [_pendingRightClickTimer invalidate];
+        _pendingRightClickTimer = nil;
+        [_weaponOverlay cycleAt:point];
+        return;
+    }
+
+    [_pendingRightClickTimer invalidate];
+    __weak AppDelegate *weakSelf = self;
+    NSPoint clickPoint = point;
+    _pendingRightClickTimer = [NSTimer timerWithTimeInterval:0.48 repeats:NO block:^(NSTimer *timer) {
+        AppDelegate *strongSelf = weakSelf;
+        strongSelf->_pendingRightClickTimer = nil;
+        [strongSelf deleteCrabAt:clickPoint];
+    }];
+    [NSRunLoop.mainRunLoop addTimer:_pendingRightClickTimer forMode:NSRunLoopCommonModes];
 }
 
 - (void)deleteCrabAt:(NSPoint)point {
@@ -955,8 +1325,13 @@
                                                   action:nil keyEquivalent:@""];
     hint.enabled = NO;
     [menu addItem:hint];
+    NSMenuItem *weaponHint = [[NSMenuItem alloc] initWithTitle:@"Double right-click to cycle cursor weapons"
+                                                        action:nil keyEquivalent:@""];
+    weaponHint.enabled = NO;
+    [menu addItem:weaponHint];
     [menu addItem:NSMenuItem.separatorItem];
     [menu addItemWithTitle:@"Summon Crab" action:@selector(summonFromMenu:) keyEquivalent:@"n"].target = self;
+    [menu addItemWithTitle:@"Next Cursor Weapon" action:@selector(nextCursorWeapon:) keyEquivalent:@"w"].target = self;
     [menu addItemWithTitle:@"Clear All Crabs" action:@selector(clearCrabs:) keyEquivalent:@"k"].target = self;
     [menu addItem:NSMenuItem.separatorItem];
     [menu addItemWithTitle:@"Quit Claude Crab" action:@selector(quit:) keyEquivalent:@"q"].target = self;
@@ -964,11 +1339,13 @@
 }
 
 - (void)summonFromMenu:(id)sender { [self summonAt:NSEvent.mouseLocation]; }
+- (void)nextCursorWeapon:(id)sender { [_weaponOverlay cycleAt:NSEvent.mouseLocation]; }
 - (void)clearCrabs:(id)sender {
     for (CrabPet *crab in _crabs) [crab dismiss];
     [_crabs removeAllObjects];
     for (CursorProjectile *projectile in _projectiles.allValues) [projectile dismiss];
     [_projectiles removeAllObjects];
+    [_weaponOverlay dismiss];
 }
 - (void)quit:(id)sender { [NSApp terminate:nil]; }
 @end

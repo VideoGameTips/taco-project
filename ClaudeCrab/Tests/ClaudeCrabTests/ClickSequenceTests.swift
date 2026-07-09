@@ -30,4 +30,12 @@ struct ClickSequenceTests {
         #expect(!sequence.register(at: CGPoint(x: 100, y: 100), time: 1.1))
         #expect(sequence.clickCount == 1)
     }
+
+    @Test
+    func recognizesConfigurableDoubleClicks() {
+        var sequence = ClickSequence(requiredClickCount: 2)
+
+        #expect(!sequence.register(at: CGPoint(x: 12, y: 12), time: 1.0))
+        #expect(sequence.register(at: CGPoint(x: 13, y: 12), time: 1.18))
+    }
 }

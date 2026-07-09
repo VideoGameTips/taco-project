@@ -8,6 +8,7 @@ final class CrabManager {
     private var draggedCrab: CrabPet?
     private var behaviorTimer: Timer?
     private var projectiles: [UUID: CursorProjectile] = [:]
+    private let weaponOverlay = CursorWeaponOverlay()
 
     init() {
         behaviorTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: true) {
@@ -32,9 +33,11 @@ final class CrabManager {
         crabs.removeAll()
         projectiles.values.forEach { $0.dismiss() }
         projectiles.removeAll()
+        weaponOverlay.dismiss()
     }
 
     func mouseDown(at point: CGPoint) {
+        weaponOverlay.attack(at: point)
         guard let crab = crabs.reversed().first(where: { $0.contains(point) }) else { return }
         draggedCrab = crab
         crab.beginDrag(at: point, whileFriendly: crab.isFriendly)
@@ -73,6 +76,14 @@ final class CrabManager {
                 friend.becomeNuclearAngry()
             }
         }
+    }
+
+    func cycleCursorWeapon(at point: CGPoint) {
+        weaponOverlay.cycle(at: point)
+    }
+
+    func cursorMoved(to point: CGPoint) {
+        weaponOverlay.updatePosition(to: point)
     }
 
     private func updateBehavior() {

@@ -13,6 +13,7 @@ swift run
 ```
 
 The crab icon in the menu bar can summon a crab, clear all crabs, or quit.
+Double right-click anywhere to cycle the cursor through the weapon catalog.
 Building requires a current full Xcode installation (not a mismatched standalone
 Command Line Tools installation).
 
@@ -45,6 +46,8 @@ the app after granting this permission.
   skull animation.
 - Right-click deletes a crab. A nearby friend will either grieve or enter
   nuclear rage and rapidly throw cartoon radioactive bombs.
+- Double right-click cycles the cursor through swords, bows, axes, firearms,
+  sci-fi weapons, and the rest of the included weapon catalog.
 - Crabs float above normal windows, ignore mouse input, and follow you across
   Spaces.
 - The visual is drawn directly in Swift from simple rectangles, based on the

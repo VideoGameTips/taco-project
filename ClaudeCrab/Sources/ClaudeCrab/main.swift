@@ -29,12 +29,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.crabManager.mouseUp(at: point)
         } onRightClick: { [weak self] point in
             self?.crabManager.deleteCrab(at: point)
+        } onDoubleRightClick: { [weak self] point in
+            self?.crabManager.cycleCursorWeapon(at: point)
+        } onMouseMoved: { [weak self] point in
+            self?.crabManager.cursorMoved(to: point)
         }
         tapMonitor?.start()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         tapMonitor?.stop()
+        crabManager.clear()
     }
 
     private func installStatusItem() {
@@ -46,6 +51,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let hint = NSMenuItem(title: "Triple-click anywhere to summon", action: nil, keyEquivalent: "")
         hint.isEnabled = false
         menu.addItem(hint)
+        let weaponHint = NSMenuItem(title: "Double right-click to cycle cursor weapons", action: nil, keyEquivalent: "")
+        weaponHint.isEnabled = false
+        menu.addItem(weaponHint)
         menu.addItem(.separator())
 
         let summon = NSMenuItem(
@@ -55,6 +63,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         summon.target = self
         menu.addItem(summon)
+
+        let nextWeapon = NSMenuItem(
+            title: "Next Cursor Weapon",
+            action: #selector(nextCursorWeapon),
+            keyEquivalent: "w"
+        )
+        nextWeapon.target = self
+        menu.addItem(nextWeapon)
 
         let clear = NSMenuItem(
             title: "Clear All Crabs",
@@ -79,6 +95,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func summonFromMenu() {
         crabManager.summon(at: NSEvent.mouseLocation)
+    }
+
+    @objc private func nextCursorWeapon() {
+        crabManager.cycleCursorWeapon(at: NSEvent.mouseLocation)
     }
 
     @objc private func clearCrabs() {
