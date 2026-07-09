@@ -11,6 +11,10 @@
 !/ClaudeCrab/**
 !/server/
 !/server/**
+!/campaign-map-viewer.html
+!/campaign-map-atlas.svg
+!/campaign-maps/
+!/campaign-maps/**
 !/README.md
 !/CLAUDE.md
 !/.gitignore
