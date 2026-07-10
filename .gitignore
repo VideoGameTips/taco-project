@@ -1,21 +1,5 @@
-# This folder holds many projects; track only the Iron Tide / TACO project files.
-# Ignore everything by default…
-/*
-# …except the battle simulator files.
-!/battle-sim.html
-!/index.html
-!/iron-tide.html
-!/battleship.html
-!/mech-battles.html
-!/ClaudeCrab/
-!/ClaudeCrab/**
-!/server/
-!/server/**
-!/campaign-map-viewer.html
-!/campaign-map-atlas.svg
-!/campaign-maps/
-!/campaign-maps/**
-!/README.md
-!/CLAUDE.md
-!/.gitignore
-!/.nojekyll
+.DS_Store
+node_modules/
+dist/
+build/
+*.log
