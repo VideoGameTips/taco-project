@@ -1,32 +1,45 @@
-# 2D Battle Simulator
+# Iron Tide
 
-A TABS-meets-Melon-Playground sandbox battle simulator that runs entirely in the browser — no build, no dependencies. Open the HTML file and play.
+Browser naval battle sandbox with campaign theaters, ship upgrades, aircraft, ground assaults, and an optional WebSocket relay server for multiplayer room experiments.
 
-Two versions:
+The main game is self-contained in `index.html` and runs directly in a modern browser. The relay server lives in `server/` for local or Railway deployment.
 
-- **`index.html`** — the main game. Side view with gravity, jointed (two-bone IK) limbs, semi-ragdoll physics, climbing, and a huge roster.
-- **`battle-sim.html`** — the original top-down version (circle fighters).
+## Project Layout
 
-## How to play
+- `index.html` - main Iron Tide game.
+- `battle-sim.html` - older top-down battle simulator prototype.
+- `mech-battles.html` - mech battle prototype.
+- `campaign-map-viewer.html` - campaign map gallery/viewer.
+- `campaign-map-atlas.svg` - combined campaign map atlas.
+- `campaign-maps/` - individual SVG campaign theater maps.
+- `server/` - Node.js WebSocket relay server and deploy notes.
 
-1. Open `index.html` in any modern browser.
-2. Pick a **team** (Red / Blue), a **skin**, a **weapon**, and optionally **armour**, then **click the battlefield** to place fighters (drag to place many, right-click to delete).
-3. Place **vehicles** from the panel, choose a **map**, then hit **Start** — last team standing wins.
-4. **Random Army** fills both sides instantly. **Reset** revives everyone to their setup positions.
+## Play Locally
+
+Open `index.html` in any modern desktop browser.
+
+For the relay server:
+
+```bash
+cd server
+npm install
+npm start
+```
+
+Then check:
+
+- `http://localhost:3000/health`
+- `http://localhost:3000/servers`
+- `ws://localhost:3000/play`
 
 ## Features
 
-- **63 weapons** — melee (swords, axes, hammers, spears, chainsaw, whips…), guns (pistols, rifles, snipers, miniguns, LMGs…), launchers (RPG, bazooka, mortars), energy weapons, bows, and **throwables** (grenade, molotov with a fire pool, dynamite, gas grenade, C4 with a timed fuse).
-- **8 skins** with distinct HP/speed/size (Soldier, Scout, Ninja, Knight, Tank, Zombie, Robot, Giant).
-- **5 armour tiers** that reduce damage, add HP, and trade off speed.
-- **24 combat vehicles** — tanks, APCs, mechs, artillery, rocket trucks (Katyusha), static rocket turrets (Nebelwerfer), Flak guns, plus aircraft: fighters, **stealth bomber (flying wing)**, gunships, bombers, drones, and helicopters.
-- **11 themed maps** — Flat Field, Platforms, The Pit, Twin Towers, Staircase, Sky Bridge, Hill, Gang Base, Torture Chamber, Rooftops, Canyon (with per-map skies and decorations).
-- **Smart AI** — units retaliate against whoever shoots them, advance for a clear line of fire, climb walls/ledges, avoid walking into deadly gaps, and kite at range.
-- **Juicy physics** — muzzle blasts, recoil (gun kick + hip brace), glowing-hot flashes, afterburn smoke/embers, knockback, and collapse-to-the-ground death (corpses linger then fade; you can walk over them).
-- **Two soldier forms** — classic **Stickman**, or **Countryball** mode where every fighter is a wobbly flag-ball (14 nations).
+- Ship selection with different hull classes and combat roles.
+- Naval combat with shells, aircraft, submarines, upgrades, harbor building, and campaign progression.
+- Tactical map view and unlockable campaign theaters.
+- Land assault flow with ground units, swimming, foot combat, and beachhead pressure.
+- Optional multiplayer relay primitives for rooms, teams, spawn points, state packets, firing, and events.
 
-## Tech
+## Notes
 
-Single self-contained HTML file each: vanilla JavaScript + Canvas 2D. No frameworks, no assets, no server.
-
-🤖 Built with [Claude Code](https://claude.com/claude-code)
+This repository is intentionally lightweight: the playable client is vanilla JavaScript and Canvas 2D with no build step. The server requires Node.js 20+.
